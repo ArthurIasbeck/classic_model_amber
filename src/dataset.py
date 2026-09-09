@@ -26,7 +26,7 @@ class Dataset:
                 self.i = data["i"]
                 self.d = data["d"]
                 self.y = data["y"]
-            return
+            return self.t, self.i, self.d, self.y
 
         if not txt_path.exists():
             raise FileNotFoundError(
@@ -40,6 +40,7 @@ class Dataset:
         self.y = data[:, 9:]
 
         np.savez(npz_path, t=self.t, i=self.i, d=self.d, y=self.y)
+        return self.t, self.i, self.d, self.y
 
     def plot(self):
         plots_dir = Path(__file__).resolve().parent.parent / "plots"

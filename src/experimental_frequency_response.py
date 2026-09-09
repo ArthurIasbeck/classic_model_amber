@@ -60,18 +60,20 @@ class ExperimentalFrequencyResponse:
 
             for input_index, input_signal in enumerate(u, start=1):
                 axes[0].plot(t, input_signal, label=rf"$u_{input_index}$")
+
             axes[0].set_title("Input signals")
             axes[0].set_ylabel("Amplitude")
             axes[0].grid(True)
-            axes[0].legend()
+            axes[0].legend(loc="upper right")
 
             for output_index, output_signal in enumerate(y, start=1):
                 axes[1].plot(t, output_signal, label=rf"$y_{output_index}$")
+
             axes[1].set_title("Output signals")
             axes[1].set_xlabel("Time (s)")
             axes[1].set_ylabel("Amplitude")
             axes[1].grid(True)
-            axes[1].legend()
+            axes[1].legend(loc="upper right")
 
             figure.suptitle(f"Experiment {experiment_index}")
             figure.tight_layout()
@@ -94,7 +96,7 @@ class ExperimentalFrequencyResponse:
             figsize=(4 * n_y, 3 * n_u),
             sharex=True,
             squeeze=False,
-            dpi=200,
+            dpi=100,
         )
         phase_figure, phase_axes = plt.subplots(
             n_u,
@@ -102,7 +104,7 @@ class ExperimentalFrequencyResponse:
             figsize=(4 * n_y, 3 * n_u),
             sharex=True,
             squeeze=False,
-            dpi=200,
+            dpi=100,
         )
 
         for relation, response in self.response.items():
@@ -197,7 +199,7 @@ def main():
     experimental_frequency_response = ExperimentalFrequencyResponse(
         t_experiments, u_experiments, y_experiments
     )
-    # experimental_frequency_response.plot_exp_data()
+    experimental_frequency_response.plot_exp_data()
     experimental_frequency_response.compute()
     experimental_frequency_response.plot_freq_resp(max_freq=85)
 
