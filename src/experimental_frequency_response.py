@@ -40,7 +40,7 @@ class ExperimentalFrequencyResponse:
                 Y = np.fft.fft(y)
                 S_uu = 1 / N * U * np.conj(U)
                 S_yu = 1 / N * Y * np.conj(U)
-                G = S_uu / S_yu
+                G = S_yu / S_uu
                 frequency = np.fft.fftfreq(N, d=1 / f_s)
                 self.response[f"u_{i_u + 1} -> y_{j_y + 1}"] = G
                 self.angular_frequencies[f"u_{i_u + 1} -> y_{j_y + 1}"] = (
@@ -80,8 +80,77 @@ class ExperimentalFrequencyResponse:
                 format="svg",
             )
 
-    def plot_freq_resp(self):
-        pass
+    def plot_freq_resp(self, max_freq):
+        if self.response is None or self.angular_frequencies is None:
+            raise ValueError("compute must be called before plotting the response")
+        if self.response.keys() != self.angular_frequencies.keys():
+            raise ValueError("response and frequency relations must match")
+
+        n_u = self.u[0].shape[0]
+        n_y = self.y[0].shape[0]
+        magnitude_figure, magnitude_axes = plt.subplots(
+            n_u,
+            n_y,
+            figsize=(4 * n_y, 3 * n_u),
+            sharex=True,
+            squeeze=False,
+            dpi=200,
+        )
+        phase_figure, phase_axes = plt.subplots(
+            n_u,
+            n_y,
+            figsize=(4 * n_y, 3 * n_u),
+            sharex=True,
+            squeeze=False,
+            dpi=200,
+        )
+
+        for relation, response in self.response.items():
+            input_name, output_name = relation.split(" -> ")
+            input_index = int(input_name.split("_")[1]) - 1
+            output_index = int(output_name.split("_")[1]) - 1
+
+            angular_frequency = self.angular_frequencies[relation]
+            positive_frequency = (angular_frequency > 0) & (
+                angular_frequency < max_freq
+            )
+            angular_frequency = angular_frequency[positive_frequency]
+            response = response[positive_frequency]
+
+            magnitude = 20 * np.log10(np.abs(response))
+            phase = np.unwrap(np.angle(response)) * 180 / np.pi
+
+            magnitude_axis = magnitude_axes[input_index, output_index]
+            magnitude_axis.semilogx(angular_frequency, magnitude)
+            magnitude_axis.set_title(relation)
+            magnitude_axis.set_ylabel("Magnitude (dB)")
+            magnitude_axis.grid(True, which="both")
+
+            phase_axis = phase_axes[input_index, output_index]
+            phase_axis.semilogx(angular_frequency, phase)
+            phase_axis.set_title(relation)
+            phase_axis.set_ylabel("Phase (degrees)")
+            phase_axis.grid(True, which="both")
+
+        for output_index in range(n_y):
+            magnitude_axes[-1, output_index].set_xlabel("Angular frequency (rad/s)")
+            phase_axes[-1, output_index].set_xlabel("Angular frequency (rad/s)")
+
+        magnitude_figure.suptitle("Experimental frequency-response magnitude")
+        magnitude_figure.tight_layout()
+        phase_figure.suptitle("Experimental frequency-response phase")
+        phase_figure.tight_layout()
+
+        plots_directory = Path(self.plots_dir)
+        plots_directory.mkdir(parents=True, exist_ok=True)
+        magnitude_figure.savefig(
+            plots_directory / "experimental_frequency_response_magnitude.svg",
+            format="svg",
+        )
+        phase_figure.savefig(
+            plots_directory / "experimental_frequency_response_phase.svg",
+            format="svg",
+        )
 
 
 def main():
@@ -128,8 +197,9 @@ def main():
     experimental_frequency_response = ExperimentalFrequencyResponse(
         t_experiments, u_experiments, y_experiments
     )
-    experimental_frequency_response.plot_exp_data()
+    # experimental_frequency_response.plot_exp_data()
     experimental_frequency_response.compute()
+    experimental_frequency_response.plot_freq_resp(max_freq=85)
 
 
 if __name__ == "__main__":
