@@ -36,10 +36,13 @@ def main():
     ]
 
     experimental_frequency_response = ExperimentalFrequencyResponse(t, i, y)
-    experimental_frequency_response.plot_exp_data()
+    # experimental_frequency_response.plot_exp_data()
 
-    experimental_frequency_response.compute()
-    experimental_frequency_response.plot_freq_resp(max_freq=1500)
+    experimental_frequency_response.filter_output()
+    experimental_frequency_response.plot_filter_output()
+
+    # experimental_frequency_response.compute()
+    # experimental_frequency_response.plot_freq_resp(max_freq=1500)
 
 
 if __name__ == "__main__":

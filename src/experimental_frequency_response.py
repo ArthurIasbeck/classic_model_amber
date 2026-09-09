@@ -1,11 +1,30 @@
 from pathlib import Path
+from tkinter import TclError
+
 import control
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import butter, sosfiltfilt
+
+
+def maximize_window(figure):
+    figure_manager = figure.canvas.manager
+    window = getattr(figure_manager, "window", None)
+    if window is not None:
+        if hasattr(window, "showMaximized"):
+            window.showMaximized()
+        elif hasattr(window, "state"):
+            try:
+                window.state("zoomed")
+            except TclError:
+                window.attributes("-zoomed", True)
+        elif hasattr(window, "Maximize"):
+            window.Maximize(True)
 
 
 class ExperimentalFrequencyResponse:
     def __init__(self, t_experiments, u_experiments, y_experiments):
+
         if not (len(t_experiments) == len(u_experiments) == len(y_experiments)):
             raise ValueError("t, u, and y must contain the same number of experiments")
         if not t_experiments:
@@ -14,10 +33,99 @@ class ExperimentalFrequencyResponse:
         self.t = list(t_experiments)
         self.u = list(u_experiments)
         self.y = list(y_experiments)
+        self.y_original = None
+
         self.n_experiments = len(self.t)
         self.angular_frequencies = None
         self.response = None
         self.plots_dir = "../plots"
+
+    def filter_output(self, plot=False):
+        cutoff_frequency = 200
+        filtered_y_experiments = []
+
+        for t, y in zip(self.t, self.y):
+            sampling_frequency = 1 / (t[1] - t[0])
+            nyquist_frequency = sampling_frequency / 2
+            if cutoff_frequency >= nyquist_frequency:
+                raise ValueError(
+                    "the cutoff frequency must be below the Nyquist frequency"
+                )
+
+            second_order_filter = butter(
+                2,
+                cutoff_frequency,
+                btype="lowpass",
+                fs=sampling_frequency,
+                output="sos",
+            )
+            filtered_y = np.asarray(y, dtype=float).copy()
+            for output_index in range(filtered_y.shape[0]):
+                filtered_y[output_index, :] = sosfiltfilt(
+                    second_order_filter, filtered_y[output_index, :]
+                )
+
+            filtered_y_experiments.append(filtered_y)
+
+        self.y_original = self.y
+        self.y = filtered_y_experiments
+
+        if plot:
+            self.plot_filter_output()
+
+        return self.y
+
+    def plot_filter_output(self):
+        if self.y_original is None:
+            raise ValueError(
+                "filter_output must be called before plotting filtered data"
+            )
+
+        plots_directory = Path(self.plots_dir)
+        plots_directory.mkdir(parents=True, exist_ok=True)
+
+        for experiment_index, (t, original_y, filtered_y) in enumerate(
+            zip(self.t, self.y_original, self.y), start=1
+        ):
+            n_y = original_y.shape[0]
+            figure, axes = plt.subplots(
+                n_y,
+                1,
+                figsize=(8, 3 * n_y),
+                sharex=True,
+                squeeze=False,
+                dpi=100,
+            )
+            maximize_window(figure)
+
+            for output_index in range(n_y):
+                axis = axes[output_index, 0]
+                axis.plot(
+                    t,
+                    original_y[output_index, :],
+                    color="C0",
+                    alpha=0.8,
+                    linestyle="-",
+                    label="Original",
+                )
+                axis.plot(
+                    t,
+                    filtered_y[output_index, :],
+                    color="C3",
+                    linestyle="-",
+                    label="Filtered",
+                )
+                axis.set_ylabel(rf"$y_{output_index + 1}$")
+                axis.grid(True)
+                axis.legend(loc="upper right")
+
+            axes[-1, 0].set_xlabel("Time (s)")
+            figure.suptitle(f"Experiment {experiment_index}: filtered outputs")
+            figure.tight_layout()
+            figure.savefig(
+                plots_directory / f"experimental_filtered_data_{experiment_index}.svg",
+                format="svg",
+            )
 
     def compute(self):
         self.response = {}
@@ -25,6 +133,7 @@ class ExperimentalFrequencyResponse:
 
         n_u = self.u[0].shape[0]
         n_y = self.y[0].shape[0]
+
         for i_u in range(n_u):
             u = self.u[i_u][i_u, :]
 
