@@ -1,25 +1,9 @@
 from pathlib import Path
-from tkinter import TclError
 
 import control
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
-
-
-def maximize_window(figure):
-    figure_manager = figure.canvas.manager
-    window = getattr(figure_manager, "window", None)
-    if window is not None:
-        if hasattr(window, "showMaximized"):
-            window.showMaximized()
-        elif hasattr(window, "state"):
-            try:
-                window.state("zoomed")
-            except TclError:
-                window.attributes("-zoomed", True)
-        elif hasattr(window, "Maximize"):
-            window.Maximize(True)
 
 
 class ExperimentalFrequencyResponse:
@@ -41,7 +25,7 @@ class ExperimentalFrequencyResponse:
         self.plots_dir = "../plots"
 
     def filter_output(self, plot=False):
-        cutoff_frequency = 200
+        cutoff_frequency = 50
         filtered_y_experiments = []
 
         for t, y in zip(self.t, self.y):
@@ -53,7 +37,7 @@ class ExperimentalFrequencyResponse:
                 )
 
             second_order_filter = butter(
-                2,
+                4,
                 cutoff_frequency,
                 btype="lowpass",
                 fs=sampling_frequency,
@@ -91,12 +75,11 @@ class ExperimentalFrequencyResponse:
             figure, axes = plt.subplots(
                 n_y,
                 1,
-                figsize=(8, 3 * n_y),
+                figsize=(12, 3 * n_y),
                 sharex=True,
                 squeeze=False,
                 dpi=100,
             )
-            maximize_window(figure)
 
             for output_index in range(n_y):
                 axis = axes[output_index, 0]
@@ -229,7 +212,7 @@ class ExperimentalFrequencyResponse:
             response = response[positive_frequency]
 
             magnitude = 20 * np.log10(np.abs(response))
-            phase = np.unwrap(np.angle(response)) * 180 / np.pi
+            phase = np.angle(response) * 180 / np.pi
 
             magnitude_axis = magnitude_axes[input_index, output_index]
             magnitude_axis.semilogx(angular_frequency, magnitude)

@@ -1,6 +1,8 @@
+import csv
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 
 
 class Dataset:
@@ -13,6 +15,18 @@ class Dataset:
         self.y = None
 
     def load(self):
+        suffix = Path(self.file_path).suffix.lower()
+
+        if suffix == ".txt":
+            return self.load_txt()
+        if suffix == ".csv":
+            return self.load_csv()
+
+        raise ValueError(
+            f"Extensão de arquivo não suportada: '{Path(self.file_path).suffix}'"
+        )
+
+    def load_txt(self):
         requested_path = Path(self.file_path)
         base_path = (
             requested_path.with_suffix("") if requested_path.suffix else requested_path
@@ -42,11 +56,64 @@ class Dataset:
         np.savez(npz_path, t=self.t, i=self.i, d=self.d, y=self.y)
         return self.t, self.i, self.d, self.y
 
+    def load_csv(self):
+        requested_path = Path(self.file_path)
+        base_path = (
+            requested_path.with_suffix("") if requested_path.suffix else requested_path
+        )
+        npz_path = base_path.with_suffix(".npz")
+        csv_path = base_path.with_suffix(".csv")
+
+        if npz_path.exists():
+            with np.load(npz_path) as data:
+                self.t = data["t"]
+                self.i = data["i"]
+                self.d = data["d"]
+                self.y = data["y"]
+            return self.t, self.i, self.d, self.y
+
+        if not csv_path.exists():
+            raise FileNotFoundError(
+                f"Nenhum arquivo encontrado: '{npz_path}' ou '{csv_path}'"
+            )
+
+        with csv_path.open("r", encoding="cp1252", newline="") as file:
+            reader = csv.reader(file)
+            trace_values_start = None
+
+            for row in reader:
+                if row and row[0] == "trace_values":
+                    trace_values_start = row
+                    break
+
+            if trace_values_start is None:
+                raise ValueError("Linha 'trace_values' não encontrada no arquivo.")
+
+            data = [[float(value) for value in trace_values_start[1:]]]
+
+            for row in reader:
+                if row:
+                    data.append([float(value) for value in row[1:]])
+
+        data = np.asarray(data, dtype=np.float64)
+        if data.ndim != 2 or data.shape[1] != 13:
+            raise ValueError(
+                "O arquivo CSV deve conter uma coluna de tempo e 12 colunas de sinais."
+            )
+
+        self.t = data[:, 0]
+        self.i = data[:, 1:5]
+        self.d = data[:, [5, 7, 6, 8]]
+        self.y = data[:, [9, 11, 10, 12]]
+
+        np.savez(npz_path, t=self.t, i=self.i, d=self.d, y=self.y)
+        return self.t, self.i, self.d, self.y
+
     def plot(self):
         plots_dir = Path(__file__).resolve().parent.parent / "plots"
         plots_dir.mkdir(exist_ok=True)
 
-        n_plot_points = 100_000
+        n_plot_points = 1_000_000
         t_plot = np.linspace(self.t[0], self.t[-1], n_plot_points)
 
         def interpolate(data):
@@ -93,7 +160,7 @@ class Dataset:
 
 
 if __name__ == "__main__":
-    load_data = Dataset(file_path="../data/chirp.txt")
+    load_data = Dataset(file_path="../data/random_v13.csv")
     load_data.load()
     load_data.plot()
     plt.show()
