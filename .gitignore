@@ -1,4 +1,6 @@
 data/
+src/utils/txt_data/
+plots/*.npz
 .idea/
 __pycache__/
 *.py[cod]

@@ -12,6 +12,9 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 - geracao de graficos dos sinais experimentais;
 - estimativa da matriz de resposta em frequencia por FFT;
 - graficos de magnitude e fase para cada relacao entrada-saida;
+- analise de autocorrelacao e correlacao cruzada com decimacao configuravel;
+- graficos das FFTs de perturbacoes e saidas;
+- filtragem passa-baixas e analise de resposta em frequencia SISO;
 - scripts MATLAB para exportar os dados originais para o formato utilizado em
   Python;
 - exemplo visual que compara a estimativa experimental com uma funcao de
@@ -25,9 +28,14 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 |-- src/
 |   |-- dataset.py                     # Carga e visualizacao dos dados
 |   |-- experimental_frequency_response.py
-|   `-- utils/                         # Conversao de dados no MATLAB
+|   |-- experimental_frequency_response_siso.py
+|   |-- freq_resp.py                   # Analise MIMO com dados experimentais
+|   |-- freq_resp_siso.py              # Analise SISO com dados experimentais
+|   |-- utils.py                       # Interpolacao para visualizacao
+|   `-- utils/                         # Conversao e dados auxiliares MATLAB
 |-- tests/
-|   `-- 00_compute_exp_freq_resp.py    # Comparacao visual da resposta
+|   |-- 00_compute_exp_freq_resp.py    # Comparacao visual da resposta
+|   `-- 01_read_csv.py                 # Leitura de CSV do dSPACE
 |-- requirements.txt
 `-- README.md
 ```
@@ -68,6 +76,11 @@ Os scripts em `src/utils/` convertem resultados MATLAB para essa organizacao de
 colunas. Eles devem ser executados com o diretorio de trabalho ajustado para que
 os caminhos relativos apontem para `data/`.
 
+Os CSVs exportados pelo dSPACE podem conter cabecalhos e uma linha
+`trace_values`; `Dataset.load()` localiza essa linha, reorganiza as colunas de
+perturbacao e saida para a convencao do projeto e cria um cache `.npz` ao lado
+do CSV. Os arquivos brutos e os caches permanecem fora do versionamento.
+
 ## Uso
 
 ### Visualizacao de um conjunto de dados
@@ -89,6 +102,11 @@ MPLBACKEND=Agg python dataset.py
 
 Os graficos de entrada, perturbacao e saida sao gravados em `plots/`.
 
+`Dataset.plot_crosscorrelation()` e `Dataset.plot_autocorrelation()` geram
+correlacoes com os sinais decimados. `Dataset.compute_fft()` gera as magnitudes
+das FFTs de perturbacoes e saidas. Esses metodos exigem que o conjunto tenha
+sido carregado e gravam os SVGs em `plots/`.
+
 ### Resposta em frequencia
 
 `ExperimentalFrequencyResponse` recebe uma lista de experimentos por entrada
@@ -100,6 +118,10 @@ S_uu = U * conj(U) / N
 S_yu = Y * conj(U) / N
 G = S_yu / S_uu
 ```
+
+O `Dataset` segue o mesmo padrao: `i`, `d` e `y` sao armazenados como
+`(n_sinais, n_amostras)`. Os arquivos CSV e TXT permanecem em formato tabular,
+com uma amostra por linha; a transposicao ocorre durante o carregamento.
 
 O exemplo principal cria um sistema MIMO sintetico de duas entradas e duas
 saidas, excita uma entrada por experimento e gera os diagramas de magnitude e
@@ -138,3 +160,9 @@ MPLBACKEND=Agg python tests/00_compute_exp_freq_resp.py
 Esse script constroi uma matriz DFT densa. Com os 20.000 pontos configurados no
 exemplo, somente essa matriz pode consumir cerca de 3,2 GB de memoria. Evite
 executa-lo em maquinas com memoria limitada.
+
+Os scripts `src/freq_resp.py` e `src/freq_resp_siso.py` executam analises sobre
+arquivos experimentais reais. O segundo aplica filtragem passa-baixas, recorta
+os experimentos e calcula a resposta SISO media. Eles dependem dos dados locais
+em `data/` e podem exigir varios gigabytes de memoria; nao sao testes
+automatizados.

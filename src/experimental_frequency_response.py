@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 
+from utils import interpolate_signals
+
 
 class ExperimentalFrequencyResponse:
     def __init__(self, t_experiments, u_experiments, y_experiments):
@@ -24,8 +26,7 @@ class ExperimentalFrequencyResponse:
         self.response = None
         self.plots_dir = "../plots"
 
-    def filter_output(self, plot=False):
-        cutoff_frequency = 50
+    def filter_output(self, cutoff_frequency, plot=False):
         filtered_y_experiments = []
 
         for t, y in zip(self.t, self.y):
@@ -71,6 +72,8 @@ class ExperimentalFrequencyResponse:
         for experiment_index, (t, original_y, filtered_y) in enumerate(
             zip(self.t, self.y_original, self.y), start=1
         ):
+            t_plot, original_y_plot = interpolate_signals(t, original_y)
+            _, filtered_y_plot = interpolate_signals(t, filtered_y)
             n_y = original_y.shape[0]
             figure, axes = plt.subplots(
                 n_y,
@@ -84,16 +87,16 @@ class ExperimentalFrequencyResponse:
             for output_index in range(n_y):
                 axis = axes[output_index, 0]
                 axis.plot(
-                    t,
-                    original_y[output_index, :],
+                    t_plot,
+                    original_y_plot[output_index, :],
                     color="C0",
                     alpha=0.8,
                     linestyle="-",
                     label="Original",
                 )
                 axis.plot(
-                    t,
-                    filtered_y[output_index, :],
+                    t_plot,
+                    filtered_y_plot[output_index, :],
                     color="C3",
                     linestyle="-",
                     label="Filtered",
@@ -148,18 +151,20 @@ class ExperimentalFrequencyResponse:
         for experiment_index, (t, u, y) in enumerate(
             zip(self.t, self.u, self.y), start=1
         ):
+            t_plot, u_plot = interpolate_signals(t, u)
+            _, y_plot = interpolate_signals(t, y)
             figure, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True, dpi=200)
 
-            for input_index, input_signal in enumerate(u, start=1):
-                axes[0].plot(t, input_signal, label=rf"$u_{input_index}$")
+            for input_index, input_signal in enumerate(u_plot, start=1):
+                axes[0].plot(t_plot, input_signal, label=rf"$u_{input_index}$")
 
             axes[0].set_title("Input signals")
             axes[0].set_ylabel("Amplitude")
             axes[0].grid(True)
             axes[0].legend(loc="upper right")
 
-            for output_index, output_signal in enumerate(y, start=1):
-                axes[1].plot(t, output_signal, label=rf"$y_{output_index}$")
+            for output_index, output_signal in enumerate(y_plot, start=1):
+                axes[1].plot(t_plot, output_signal, label=rf"$y_{output_index}$")
 
             axes[1].set_title("Output signals")
             axes[1].set_xlabel("Time (s)")
@@ -212,16 +217,20 @@ class ExperimentalFrequencyResponse:
             response = response[positive_frequency]
 
             magnitude = 20 * np.log10(np.abs(response))
-            phase = np.angle(response) * 180 / np.pi
+            phase = np.angle(response)
+            plot_angular_frequency, magnitude_plot = interpolate_signals(
+                angular_frequency, magnitude[np.newaxis, :]
+            )
+            _, phase_plot = interpolate_signals(angular_frequency, phase[np.newaxis, :])
 
             magnitude_axis = magnitude_axes[input_index, output_index]
-            magnitude_axis.semilogx(angular_frequency, magnitude)
+            magnitude_axis.semilogx(plot_angular_frequency, magnitude_plot[0])
             magnitude_axis.set_title(relation)
             magnitude_axis.set_ylabel("Magnitude (dB)")
             magnitude_axis.grid(True, which="both")
 
             phase_axis = phase_axes[input_index, output_index]
-            phase_axis.semilogx(angular_frequency, phase)
+            phase_axis.semilogx(plot_angular_frequency, phase_plot[0] * 180 / np.pi)
             phase_axis.set_title(relation)
             phase_axis.set_ylabel("Phase (degrees)")
             phase_axis.grid(True, which="both")

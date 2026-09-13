@@ -48,16 +48,16 @@ def read_dspace_csv(filename):
     data = np.asarray(data, dtype=np.float64)
 
     time = data[:, 0]
-    values = data[:, 1:]
+    values = data[:, 1:].T
 
-    if values.shape[1] != number_of_traces:
+    if values.shape[0] != number_of_traces:
         raise ValueError(
             f"Número de traces inconsistente: "
             f"{number_of_traces} paths encontrados, "
-            f"mas {values.shape[1]} colunas de dados."
+            f"mas {values.shape[0]} linhas de dados."
         )
 
-    trace_values = {path: values[:, i] for i, path in enumerate(paths)}
+    trace_values = {path: values[i, :] for i, path in enumerate(paths)}
     return time, paths, trace_values
 
 

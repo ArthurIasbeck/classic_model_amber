@@ -4,6 +4,15 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
+from utils import interpolate_signals
+
+
+def compute_abs_phase(X):
+    X = np.round(X, 10)
+    abs_X = np.absolute(X)
+    phase_X = np.array([0 if np.absolute(z) == 0 else np.angle(z) for z in X])
+    return abs_X, phase_X
+
 
 class Dataset:
     def __init__(self, file_path):
@@ -49,9 +58,9 @@ class Dataset:
 
         data = np.loadtxt(txt_path, delimiter=",")
         self.t = data[:, 0]
-        self.i = data[:, 1:5]
-        self.d = data[:, 5:9]
-        self.y = data[:, 9:]
+        self.i = data[:, 1:5].T
+        self.d = data[:, 5:9].T
+        self.y = data[:, 9:].T
 
         np.savez(npz_path, t=self.t, i=self.i, d=self.d, y=self.y)
         return self.t, self.i, self.d, self.y
@@ -102,34 +111,209 @@ class Dataset:
             )
 
         self.t = data[:, 0]
-        self.i = data[:, 1:5]
-        self.d = data[:, [5, 7, 6, 8]]
-        self.y = data[:, [9, 11, 10, 12]]
+        self.i = data[:, 1:5].T
+        self.d = data[:, [5, 7, 6, 8]].T
+        self.y = data[:, [9, 11, 10, 12]].T
 
         np.savez(npz_path, t=self.t, i=self.i, d=self.d, y=self.y)
         return self.t, self.i, self.d, self.y
+
+    @staticmethod
+    def _decimate_signal(signal, decimation_factor):
+        if not isinstance(decimation_factor, (int, np.integer)):
+            raise TypeError("O fator de decimação deve ser um número inteiro.")
+        if decimation_factor < 1:
+            raise ValueError("O fator de decimação deve ser maior ou igual a 1.")
+
+        signal = np.asarray(signal, dtype=float)
+        return signal[::decimation_factor]
+
+    def compute_crosscorrelation_function(self, u, y, decimation_factor=1_000):
+        u = self._decimate_signal(u, decimation_factor)
+        y = self._decimate_signal(y, decimation_factor)
+        if len(u) != len(y):
+            raise ValueError("Os sinais devem ter o mesmo número de amostras.")
+
+        u = u.copy()
+        y = y.copy()
+        mean_u = np.mean(u)
+        sigma_u = np.std(u)
+        mean_y = np.mean(y)
+        sigma_y = np.std(y)
+        n_samples = len(u)
+
+        u -= mean_u
+        u = u / sigma_u if sigma_u != 0 else u
+        y -= mean_y
+        y = y / sigma_y if sigma_y != 0 else y
+
+        r_uy = np.correlate(y, u, mode="full") / n_samples
+        confidence_interval = 1.96 / np.sqrt(n_samples)
+        k_values = np.arange(-n_samples + 1, n_samples)
+
+        return k_values, r_uy, confidence_interval
+
+    def compute_autocorrelation_function(self, u, decimation_factor=1_000):
+        k_values, r_uu, confidence_interval = self.compute_crosscorrelation_function(
+            u, u, decimation_factor=decimation_factor
+        )
+        nonnegative_lags = k_values >= 0
+        return (
+            k_values[nonnegative_lags],
+            r_uu[nonnegative_lags],
+            confidence_interval,
+        )
+
+    def plot_crosscorrelation(self, decimation_factor=500):
+        n_inputs = self.i.shape[0]
+        n_outputs = self.y.shape[0]
+        sampling_period = np.mean(np.diff(self.t))
+        figure, axes = plt.subplots(
+            n_inputs,
+            n_outputs,
+            figsize=(4 * n_outputs, 2.5 * n_inputs),
+            squeeze=False,
+            sharex=True,
+        )
+
+        for i_u in range(n_inputs):
+            for j_y in range(n_outputs):
+                k_values, r_uy, confidence_interval = (
+                    self.compute_crosscorrelation_function(
+                        self.i[i_u, :],
+                        self.y[j_y, :],
+                        decimation_factor=decimation_factor,
+                    )
+                )
+                axis = axes[i_u, j_y]
+                lag_times = k_values * sampling_period * decimation_factor
+                axis.plot(lag_times, r_uy)
+                axis.axhline(confidence_interval, color="black", linestyle="--")
+                axis.axhline(-confidence_interval, color="black", linestyle="--")
+                axis.set_title(f"$u_{i_u + 1}$ x $y_{j_y + 1}$")
+                axis.set_ylabel("Correlação")
+                axis.grid()
+
+        for axis in axes[-1, :]:
+            axis.set_xlabel("Lag (s)")
+
+        figure.tight_layout()
+        plots_dir = Path(__file__).resolve().parent.parent / "plots"
+        plots_dir.mkdir(exist_ok=True)
+        figure.savefig(
+            plots_dir / (self.file_name + "_crosscorrelation.svg"),
+            format="svg",
+        )
+        return figure, axes
+
+    def plot_autocorrelation(self, decimation_factor=500):
+        n_inputs = self.i.shape[0]
+        sampling_period = np.mean(np.diff(self.t))
+        figure, axes = plt.subplots(
+            n_inputs,
+            1,
+            figsize=(10, 2.5 * n_inputs),
+            squeeze=False,
+            sharex=True,
+        )
+
+        for i_u in range(n_inputs):
+            k_values, r_uu, confidence_interval = self.compute_autocorrelation_function(
+                self.i[i_u, :], decimation_factor=decimation_factor
+            )
+            axis = axes[i_u, 0]
+            lag_times = k_values * sampling_period * decimation_factor
+            axis.plot(lag_times, r_uu)
+            axis.axhline(confidence_interval, color="black", linestyle="--")
+            axis.axhline(-confidence_interval, color="black", linestyle="--")
+            axis.set_title(f"Autocorrelação de $u_{i_u + 1}$")
+            axis.set_ylabel("Autocorrelação")
+            axis.grid()
+
+        axes[-1, 0].set_xlabel("Lag (s)")
+        figure.tight_layout()
+        plots_dir = Path(__file__).resolve().parent.parent / "plots"
+        plots_dir.mkdir(exist_ok=True)
+        figure.savefig(
+            plots_dir / (self.file_name + "_autocorrelation.svg"), format="svg"
+        )
+        return figure, axes
+
+    def compute_fft(self):
+        if self.t is None or self.d is None or self.y is None:
+            raise ValueError("Os dados devem ser carregados antes de computar a FFT.")
+        if len(self.t) < 2:
+            raise ValueError("O vetor de tempo deve conter pelo menos duas amostras.")
+        if self.d.ndim != 2 or self.d.shape[1] != len(self.t):
+            raise ValueError(
+                "A matriz de perturbações deve ter uma amostra por coluna "
+                "correspondente ao vetor de tempo."
+            )
+        if self.y.ndim != 2 or self.y.shape[1] != len(self.t):
+            raise ValueError(
+                "A matriz de saídas deve ter uma amostra por coluna "
+                "correspondente ao vetor de tempo."
+            )
+
+        sampling_period = self.t[1] - self.t[0]
+        if sampling_period == 0:
+            raise ValueError("O período de amostragem deve ser diferente de zero.")
+
+        n_samples = self.d.shape[1]
+        frequencies = np.fft.fftfreq(n_samples, sampling_period)
+        positive_frequencies = frequencies >= 0
+
+        plots_dir = Path(__file__).resolve().parent.parent / "plots"
+        plots_dir.mkdir(exist_ok=True)
+
+        def plot_fft(signals, signal_name, title, file_suffix):
+            n_signals = signals.shape[0]
+            figure, axes = plt.subplots(
+                n_signals,
+                1,
+                figsize=(10, 2.5 * n_signals),
+                sharex=True,
+                squeeze=False,
+            )
+
+            for channel_index, signal in enumerate(signals):
+                spectrum = np.fft.fft(signal) * 2 / n_samples
+                magnitude, _ = compute_abs_phase(spectrum)
+                axis = axes[channel_index, 0]
+                axis.plot(
+                    frequencies[positive_frequencies], magnitude[positive_frequencies]
+                )
+                axis.set_ylabel(rf"$|{signal_name}_{channel_index + 1}|$")
+                axis.grid()
+
+            axes[-1, 0].set_xlabel("Frequência (Hz)")
+            figure.suptitle(title)
+            figure.tight_layout()
+            figure.savefig(plots_dir / (self.file_name + file_suffix), format="svg")
+
+        plot_fft(
+            self.d,
+            "D",
+            "Magnitude das FFTs das perturbações",
+            "_disturbance_fft.svg",
+        )
+        plot_fft(
+            self.y,
+            "Y",
+            "Magnitude das FFTs das saídas",
+            "_output_fft.svg",
+        )
 
     def plot(self):
         plots_dir = Path(__file__).resolve().parent.parent / "plots"
         plots_dir.mkdir(exist_ok=True)
 
-        n_plot_points = 1_000_000
-        t_plot = np.linspace(self.t[0], self.t[-1], n_plot_points)
-
-        def interpolate(data):
-            return np.column_stack(
-                [
-                    np.interp(t_plot, self.t, data[:, column])
-                    for column in range(data.shape[1])
-                ]
-            )
-
-        i_plot = interpolate(self.i)
-        d_plot = interpolate(self.d)
-        y_plot = interpolate(self.y)
+        t_plot, i_plot = interpolate_signals(self.t, self.i)
+        _, d_plot = interpolate_signals(self.t, self.d)
+        _, y_plot = interpolate_signals(self.t, self.y)
 
         plt.figure(figsize=(8, 4), dpi=250)
-        plt.plot(t_plot, i_plot)
+        plt.plot(t_plot, np.transpose(i_plot))
         plt.title("Current")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
@@ -139,7 +323,7 @@ class Dataset:
         plt.savefig(plots_dir / (self.file_name + ".svg"), format="svg")
 
         plt.figure(figsize=(8, 4), dpi=250)
-        plt.plot(t_plot, d_plot)
+        plt.plot(t_plot, np.transpose(d_plot))
         plt.title("Disturbance")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
@@ -149,7 +333,7 @@ class Dataset:
         plt.savefig(plots_dir / (self.file_name + "_disturbance.svg"), format="svg")
 
         plt.figure(figsize=(8, 4), dpi=250)
-        plt.plot(t_plot, y_plot)
+        plt.plot(t_plot, np.transpose(y_plot))
         plt.title("Output")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
@@ -160,7 +344,10 @@ class Dataset:
 
 
 if __name__ == "__main__":
-    load_data = Dataset(file_path="../data/random_v13.csv")
+    load_data = Dataset(file_path="../data/chirp_v13_0.csv")
     load_data.load()
     load_data.plot()
+    # load_data.plot_crosscorrelation()
+    # load_data.plot_autocorrelation()
+    load_data.compute_fft()
     plt.show()
