@@ -4,6 +4,7 @@
 
 - This is a flat Python/MATLAB research workspace, not an installable package: there is no `pyproject.toml`, package `__init__.py`, CI, or task runner.
 - `src/dataset.py` loads and plots 13-column experiment data, computes correlations, and plots FFTs; `src/experimental_frequency_response.py` contains the class-based MIMO frequency-response experiment; `src/experimental_frequency_response_siso.py` contains filtering, clipping, averaging, and SISO frequency-response analysis.
+- `src/open_loop_freq_resp_siso.py` computes SISO open-loop frequency response from saved closed-loop data and generates controller, open-loop, and delay-removal plots.
 - `src/freq_resp.py` and `src/freq_resp_siso.py` are data-analysis entrypoints for real experiments; `tests/00_compute_exp_freq_resp.py` and `tests/01_read_csv.py` are scripts, not assertion-based automated tests.
 - `src/utils.py` contains interpolation helpers. The `src/utils/` directory contains MATLAB conversion scripts; its `txt_data/` subdirectory is ignored because it contains multi-gigabyte raw exports.
 - The MATLAB scripts in `src/utils/` export columns as time, four inputs, four disturbances, then four outputs, matching `Dataset.load()`.
@@ -17,6 +18,7 @@
 - Run the class-based frequency-response example from `src`, because its output directory is working-directory-relative: `(cd src && MPLBACKEND=Agg python experimental_frequency_response.py)`.
 - Run the real-data MIMO analysis from `src` only when the required files exist in `data/`: `(cd src && MPLBACKEND=Agg python freq_resp.py)`.
 - Run the real-data SISO analysis from `src` only when the required files exist in `data/`: `(cd src && MPLBACKEND=Agg python freq_resp_siso.py)`.
+- Run the SISO open-loop analysis from `src` only when the required frequency-response file and experimental data exist in `data/`: `(cd src && MPLBACKEND=Agg python open_loop_freq_resp_siso.py)`.
 - The only test-like check is `MPLBACKEND=Agg python tests/00_compute_exp_freq_resp.py` from the repository root. It generates plots but has no assertions and is not pytest-discoverable; do not report it as an automated test pass.
 - The CSV reader can be exercised with `python tests/01_read_csv.py`, but this is also a script rather than an automated test.
 

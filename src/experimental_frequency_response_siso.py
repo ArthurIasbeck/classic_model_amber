@@ -21,6 +21,7 @@ class ExperimentalFrequencyResponseSiso:
         self.angular_frequencies = None
         self.response = None
         self.plots_dir = "../plots"
+        self.data_dir = "../data"
 
         self.clip_threshold = 0.01
         self.exp_duration = 601
@@ -187,7 +188,7 @@ class ExperimentalFrequencyResponseSiso:
         self.angular_frequencies = 2 * np.pi * frequency
 
         np.savez(
-            Path(self.plots_dir) / f"{self.data_name}_frequency_response.npz",
+            Path(self.data_dir) / f"{self.data_name}_frequency_response.npz",
             angular_frequencies=self.angular_frequencies,
             response=self.response,
         )
@@ -203,20 +204,23 @@ class ExperimentalFrequencyResponseSiso:
         ):
             t_plot, u_plot = interpolate_signals(t, np.asarray(u))
             _, y_plot = interpolate_signals(t, np.asarray(y))
-            figure, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True, dpi=200)
+            figure, axis = plt.subplots(figsize=(8, 6), dpi=200)
+            output_axis = axis.twinx()
 
-            axes[0].plot(t_plot, u_plot, label=rf"$u$ [$\mu$ m]")
-            axes[0].set_title("Input signal")
-            axes[0].set_ylabel("Amplitude")
-            axes[0].grid(True)
-            axes[0].legend(loc="upper right")
+            input_line = axis.plot(t_plot, u_plot, label=rf"$u$ [$\mu$ m]")
+            output_line = output_axis.plot(
+                t_plot, y_plot, color="C1", label=rf"$y$ [$\mu$ m]"
+            )
 
-            axes[1].plot(t_plot, y_plot, label=rf"$y$ [$\mu$ m]")
-            axes[1].set_title("Output signals")
-            axes[1].set_xlabel("Time (s)")
-            axes[1].set_ylabel("Amplitude")
-            axes[1].grid(True)
-            axes[1].legend(loc="upper right")
+            axis.set_xlabel("Time (s)")
+            axis.set_ylabel(r"Input amplitude [$\mu$ m]")
+            output_axis.set_ylabel(r"Output amplitude [$\mu$ m]")
+            axis.grid(True)
+            axis.legend(
+                input_line + output_line,
+                [line.get_label() for line in input_line + output_line],
+                loc="upper right",
+            )
 
             figure.suptitle(f"Experiment {experiment_index}")
             figure.tight_layout()
@@ -251,7 +255,8 @@ class ExperimentalFrequencyResponseSiso:
         response = self.response[positive_frequency]
 
         magnitude = 20 * np.log10(np.abs(response))
-        phase = np.unwrap(np.angle(response))
+        # phase = np.unwrap(np.angle(response))
+        phase = np.angle(response)
         angular_frequency_plot, magnitude_plot = interpolate_signals(
             angular_frequency, magnitude
         )

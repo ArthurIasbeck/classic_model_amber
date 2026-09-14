@@ -15,6 +15,7 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 - analise de autocorrelacao e correlacao cruzada com decimacao configuravel;
 - graficos das FFTs de perturbacoes e saidas;
 - filtragem passa-baixas e analise de resposta em frequencia SISO;
+- calculo da resposta de malha aberta SISO a partir da resposta de malha fechada;
 - scripts MATLAB para exportar os dados originais para o formato utilizado em
   Python;
 - exemplo visual que compara a estimativa experimental com uma funcao de
@@ -31,6 +32,7 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 |   |-- experimental_frequency_response_siso.py
 |   |-- freq_resp.py                   # Analise MIMO com dados experimentais
 |   |-- freq_resp_siso.py              # Analise SISO com dados experimentais
+|   |-- open_loop_freq_resp_siso.py    # Analise SISO de malha aberta
 |   |-- utils.py                       # Interpolacao para visualizacao
 |   `-- utils/                         # Conversao e dados auxiliares MATLAB
 |-- tests/
@@ -166,3 +168,19 @@ arquivos experimentais reais. O segundo aplica filtragem passa-baixas, recorta
 os experimentos e calcula a resposta SISO media. Eles dependem dos dados locais
 em `data/` e podem exigir varios gigabytes de memoria; nao sao testes
 automatizados.
+
+### Resposta de malha aberta
+
+`open_loop_freq_resp_siso.py` carrega a resposta SISO de malha fechada salva em
+`data/`, calcula a resposta de malha aberta usando o controlador definido no
+script e grava o resultado como um novo arquivo NPZ. O script tambem gera
+graficos da resposta do controlador, da resposta de malha aberta e da funcao
+objetivo usada para avaliar a remocao de atraso.
+
+Execute-o a partir de `src/`, com os dados experimentais correspondentes
+disponiveis em `data/`:
+
+```bash
+cd src
+MPLBACKEND=Agg python open_loop_freq_resp_siso.py
+```
