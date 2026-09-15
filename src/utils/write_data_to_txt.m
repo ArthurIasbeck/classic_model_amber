@@ -1,8 +1,8 @@
 clc; clear; close all;
 
-file_name = 'chirp_v13_4';
+file_name = 'chirp_w13_4';
 load(strcat('../../data/', file_name));
-data = chirp_v13_4;
+data = chirp_w13_4;
 
 t = data.X.Data;
 

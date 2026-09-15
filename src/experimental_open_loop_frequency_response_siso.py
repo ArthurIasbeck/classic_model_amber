@@ -42,7 +42,7 @@ def get_controller():
     return C
 
 
-class OpenLoopFrequencyResponseSiso:
+class ExperimentalOpenLoopFrequencyResponseSiso:
     def __init__(self, data_name):
         self.H = None  # Open-loop frequency response
         self.data_name = data_name
@@ -70,7 +70,7 @@ class OpenLoopFrequencyResponseSiso:
         G_jw = -T_jw / (C_jw * (1 + T_jw))
 
         magnitude = 20 * np.log10(np.abs(G_jw))
-        controller_phase = np.unwrap(np.angle(G_jw))
+        phase = np.unwrap(np.angle(G_jw))
         self.H = G_jw
 
         np.savez(
@@ -94,7 +94,8 @@ class OpenLoopFrequencyResponseSiso:
 
             fig.suptitle(f"Controller Frequency Response")
             plt.savefig(
-                Path(self.plots_dir) / f"controller_frequency_response.svg",
+                Path(self.plots_dir)
+                / f"controller_frequency_response_{self.data_name}.svg",
                 format="svg",
             )
 
@@ -105,14 +106,17 @@ class OpenLoopFrequencyResponseSiso:
             plt.ylabel("Magnitude [dB]")
 
             plt.subplot(2, 1, 2)
-            plt.semilogx(omega, np.rad2deg(controller_phase))
+            plt.semilogx(omega, np.rad2deg(phase))
             plt.grid()
             plt.xlabel("Angular frequency [rad/s]")
             plt.ylabel("Phase [deg]")
 
-            fig.suptitle(f"Open Loop Frequency Response")
+            fig.suptitle(
+                rf"Open Loop Frequency Response $\rightarrow$ {self.data_name}"
+            )
             plt.savefig(
-                Path(self.plots_dir) / f"open_loop_frequency_response.svg",
+                Path(self.plots_dir)
+                / f"open_loop_frequency_response_{self.data_name}.svg",
                 format="svg",
             )
 
@@ -165,14 +169,3 @@ class OpenLoopFrequencyResponseSiso:
                 Path(self.plots_dir) / f"compare_original_delay_removed.svg",
                 format="svg",
             )
-
-
-def main():
-    open_loop_freq_response_siso = OpenLoopFrequencyResponseSiso("T_v13")
-    open_loop_freq_response_siso.compute_open_loop_freq_resp(plot=False)
-    open_loop_freq_response_siso.remove_delay()
-
-
-if __name__ == "__main__":
-    main()
-    plt.show()

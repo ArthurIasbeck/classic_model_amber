@@ -15,7 +15,10 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 - analise de autocorrelacao e correlacao cruzada com decimacao configuravel;
 - graficos das FFTs de perturbacoes e saidas;
 - filtragem passa-baixas e analise de resposta em frequencia SISO;
+- processamento separado dos ensaios chirp `V13` e `W13`;
 - calculo da resposta de malha aberta SISO a partir da resposta de malha fechada;
+- identificacao de respostas em frequencia e comparacao de modelos MIMO do rotor;
+- construcao de modelos ROSS com diferentes malhas, suspensoes e configuracoes de FRF;
 - scripts MATLAB para exportar os dados originais para o formato utilizado em
   Python;
 - exemplo visual que compara a estimativa experimental com uma funcao de
@@ -32,9 +35,13 @@ espectros de entrada e saida e exemplos para comparacao com modelos analiticos.
 |   |-- experimental_frequency_response_siso.py
 |   |-- freq_resp.py                   # Analise MIMO com dados experimentais
 |   |-- freq_resp_siso.py              # Analise SISO com dados experimentais
-|   |-- open_loop_freq_resp_siso.py    # Analise SISO de malha aberta
+|   |-- experimental_open_loop_frequency_response_siso.py
+|   |                                      # Classe para analise de malha aberta
+|   |-- ol_freq_resp_siso.py             # Execucao das analises V13 e W13
+|   |-- build_mimo_model_from_frequency_response.py
+|   |                                      # Ajuste de modelo MIMO reduzido
 |   |-- utils.py                       # Interpolacao para visualizacao
-|   `-- utils/                         # Conversao e dados auxiliares MATLAB
+|   `-- utils/                         # Conversao, modelos e dados MATLAB
 |-- tests/
 |   |-- 00_compute_exp_freq_resp.py    # Comparacao visual da resposta
 |   `-- 01_read_csv.py                 # Leitura de CSV do dSPACE
@@ -137,6 +144,21 @@ python experimental_frequency_response.py
 O argumento `max_freq` de `plot_freq_resp()` e os valores armazenados em
 `angular_frequencies` usam radianos por segundo.
 
+### Analise SISO e malha aberta
+
+`freq_resp_siso.py` possui fluxos separados para os ensaios `V13` e `W13`. O
+script `ol_freq_resp_siso.py` calcula as respostas de malha aberta dos dois
+ensaios a partir das respostas de malha fechada salvas em `data/`:
+
+```bash
+cd src
+MPLBACKEND=Agg python ol_freq_resp_siso.py
+```
+
+Os resultados sao salvos com o identificador do ensaio nos nomes dos arquivos
+NPZ e dos graficos, evitando que os resultados de `V13` e `W13` sejam
+sobrescritos.
+
 Exemplos dos resultados versionados:
 
 ![Magnitude da resposta em frequencia](plots/experimental_frequency_response_magnitude.svg)
@@ -171,16 +193,16 @@ automatizados.
 
 ### Resposta de malha aberta
 
-`open_loop_freq_resp_siso.py` carrega a resposta SISO de malha fechada salva em
-`data/`, calcula a resposta de malha aberta usando o controlador definido no
-script e grava o resultado como um novo arquivo NPZ. O script tambem gera
-graficos da resposta do controlador, da resposta de malha aberta e da funcao
-objetivo usada para avaliar a remocao de atraso.
+`experimental_open_loop_frequency_response_siso.py` implementa a classe que
+carrega a resposta SISO de malha fechada salva em `data/`, calcula a resposta de
+malha aberta usando o controlador definido no script e grava o resultado como
+um novo arquivo NPZ. O script `ol_freq_resp_siso.py` e o ponto de entrada
+executavel para os ensaios `V13` e `W13`; ele tambem gera graficos da resposta do
+controlador, da resposta de malha aberta e da funcao objetivo usada para avaliar
+a remocao de atraso.
 
-Execute-o a partir de `src/`, com os dados experimentais correspondentes
-disponiveis em `data/`:
-
-```bash
-cd src
-MPLBACKEND=Agg python open_loop_freq_resp_siso.py
-```
+O modulo `utils/amber_models.py` constroi modelos de rotor com a biblioteca
+ROSS, permite comparar discretizacoes e calcula FRFs numericas para comparacao
+com ensaios experimentais. O script `build_mimo_model_from_frequency_response.py`
+tambem oferece um fluxo de ajuste de ganhos de um modelo MIMO reduzido a partir
+das respostas de malha aberta salvas.
