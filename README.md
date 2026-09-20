@@ -77,7 +77,13 @@ sinal de perturbação. O sinal aplicado pode ser um chirp ou um PRBS, conforme 
 ensaio realizado. Nesta configuração, a perturbação é utilizada para obter a
 resposta do sistema entre a corrente de controle e o deslocamento no eixo `V13`.
 
-![Diagrama de blocos e ponto de injeção do sinal de perturbação](files/malha_fechada_mma.svg)
+<p align="center">
+  <img
+    src="files/malha_fechada_mma.svg"
+    alt="Diagrama de blocos e ponto de injeção do sinal de perturbação"
+    width="100%"
+  />
+</p>
 
 ### Identificação em frequência
 
