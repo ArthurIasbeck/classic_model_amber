@@ -1,3 +1,5 @@
+"""Carregamento, processamento e visualização de conjuntos de dados experimentais."""
+
 import csv
 from pathlib import Path
 
@@ -8,6 +10,10 @@ from utils import interpolate_signals
 
 
 def compute_abs_phase(X):
+    """Calcula magnitude e fase dos elementos de um vetor complexo.
+
+    Zera a fase dos elementos nulos para evitar uma fase indefinida.
+    """
     X = np.round(X, 10)
     abs_X = np.absolute(X)
     phase_X = np.array([0 if np.absolute(z) == 0 else np.angle(z) for z in X])
@@ -15,15 +21,26 @@ def compute_abs_phase(X):
 
 
 class Dataset:
+    """Representa dados temporais experimentais e suas operações de análise."""
+
     def __init__(self, file_path):
-        self.file_path = file_path
-        self.file_name = Path(file_path).stem
-        self.t = None
-        self.i = None
-        self.d = None
-        self.y = None
+        """Inicializa um conjunto de dados associado a um arquivo.
+
+        Args:
+            file_path: Caminho do arquivo TXT, CSV ou NPZ de entrada.
+        """
+        # Identificação e localização do conjunto de dados.
+        self.file_path = file_path  # Caminho do arquivo de dados.
+        self.file_name = Path(file_path).stem  # Nome-base usado nos arquivos de saída.
+
+        # Sinais carregados: tempo, correntes, perturbações e saídas.
+        self.t = None  # Vetor de tempo.
+        self.i = None  # Matriz de correntes de entrada.
+        self.d = None  # Matriz de sinais de perturbação.
+        self.y = None  # Matriz de sinais de saída.
 
     def load(self):
+        """Carrega os dados usando o leitor correspondente à extensão."""
         suffix = Path(self.file_path).suffix.lower()
 
         if suffix == ".npz":
@@ -44,6 +61,7 @@ class Dataset:
         )
 
     def load_txt(self):
+        """Carrega dados TXT ou seu cache NPZ associado e retorna os sinais."""
         requested_path = Path(self.file_path)
         base_path = (
             requested_path.with_suffix("") if requested_path.suffix else requested_path
@@ -74,6 +92,7 @@ class Dataset:
         return self.t, self.i, self.d, self.y
 
     def load_csv(self):
+        """Carrega dados CSV ou seu cache NPZ associado e retorna os sinais."""
         requested_path = Path(self.file_path)
         base_path = (
             requested_path.with_suffix("") if requested_path.suffix else requested_path
@@ -128,6 +147,7 @@ class Dataset:
 
     @staticmethod
     def _decimate_signal(signal, decimation_factor):
+        """Reduz a taxa de amostragem de um sinal por subamostragem regular."""
         if not isinstance(decimation_factor, (int, np.integer)):
             raise TypeError("O fator de decimação deve ser um número inteiro.")
         if decimation_factor < 1:
@@ -137,6 +157,11 @@ class Dataset:
         return signal[::decimation_factor]
 
     def compute_crosscorrelation_function(self, u, y, decimation_factor=1_000):
+        """Calcula a correlação cruzada normalizada entre dois sinais.
+
+        Retorna os atrasos em amostras, a correlação e o intervalo de confiança
+        aproximado de 95%.
+        """
         u = self._decimate_signal(u, decimation_factor)
         y = self._decimate_signal(y, decimation_factor)
         if len(u) != len(y):
@@ -162,6 +187,7 @@ class Dataset:
         return k_values, r_uy, confidence_interval
 
     def compute_autocorrelation_function(self, u, decimation_factor=1_000):
+        """Calcula a autocorrelação normalizada para atrasos não negativos."""
         k_values, r_uu, confidence_interval = self.compute_crosscorrelation_function(
             u, u, decimation_factor=decimation_factor
         )
@@ -173,6 +199,7 @@ class Dataset:
         )
 
     def plot_crosscorrelation(self, decimation_factor=500):
+        """Gera e salva as funções de correlação entre entradas e saídas."""
         n_inputs = self.i.shape[0]
         n_outputs = self.y.shape[0]
         sampling_period = np.mean(np.diff(self.t))
@@ -215,6 +242,7 @@ class Dataset:
         return figure, axes
 
     def plot_autocorrelation(self, decimation_factor=500):
+        """Gera e salva as funções de autocorrelação das entradas."""
         n_inputs = self.i.shape[0]
         sampling_period = np.mean(np.diff(self.t))
         figure, axes = plt.subplots(
@@ -248,6 +276,7 @@ class Dataset:
         return figure, axes
 
     def compute_fft(self):
+        """Calcula e salva os espectros de magnitude das perturbações e saídas."""
         if self.t is None or self.d is None or self.y is None:
             raise ValueError("Os dados devem ser carregados antes de computar a FFT.")
         if len(self.t) < 2:
@@ -275,6 +304,7 @@ class Dataset:
         plots_dir.mkdir(exist_ok=True)
 
         def plot_fft(signals, signal_name, title, file_suffix):
+            """Plota e salva as magnitudes FFT dos canais fornecidos."""
             n_signals = signals.shape[0]
             figure, axes = plt.subplots(
                 n_signals,
@@ -313,6 +343,7 @@ class Dataset:
         )
 
     def plot(self):
+        """Interpola e salva gráficos temporais de correntes, perturbações e saídas."""
         plots_dir = Path(__file__).resolve().parent.parent / "plots"
         plots_dir.mkdir(exist_ok=True)
 

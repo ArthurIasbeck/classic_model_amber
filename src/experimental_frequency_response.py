@@ -1,3 +1,5 @@
+"""Estimativa e visualização de respostas em frequência experimentais MIMO."""
+
 from pathlib import Path
 
 import control
@@ -9,26 +11,39 @@ from utils import interpolate_signals
 
 
 class ExperimentalFrequencyResponse:
+    """Calcula respostas em frequência MIMO a partir de vários experimentos."""
+
     def __init__(self, t_experiments, u_experiments, y_experiments):
+        """Inicializa a análise com tempos, entradas e saídas experimentais.
+
+        Args:
+            t_experiments: Lista de vetores de tempo.
+            u_experiments: Lista de matrizes de sinais de entrada.
+            y_experiments: Lista de matrizes de sinais de saída.
+        """
 
         if not (len(t_experiments) == len(u_experiments) == len(y_experiments)):
             raise ValueError("t, u, and y must contain the same number of experiments")
         if not t_experiments:
             raise ValueError("at least one experiment is required")
 
-        self.t = list(t_experiments)
-        self.u = list(u_experiments)
-        self.y = list(y_experiments)
-        self.y_original = None
+        # Dados experimentais e cópia das saídas antes da filtragem.
+        self.t = list(t_experiments)  # Vetores de tempo dos experimentos.
+        self.u = list(u_experiments)  # Matrizes de entradas experimentais.
+        self.y = list(y_experiments)  # Matrizes de saídas experimentais.
+        self.y_original = None  # Cópia das saídas antes da filtragem.
 
-        self.n_experiments = len(self.t)
-        self.angular_frequencies = None
-        self.response = None
-        self.plots_dir = "../plots"
+        # Resultados da análise espectral.
+        self.n_experiments = len(self.t)  # Quantidade de experimentos.
+        self.angular_frequencies = None  # Frequências angulares calculadas.
+        self.response = None  # Respostas complexas calculadas.
 
-        self.legend_loc = "upper right"
+        # Configurações de saída dos gráficos.
+        self.plots_dir = "../plots"  # Diretório dos gráficos gerados.
+        self.legend_loc = "upper right"  # Posição padrão das legendas.
 
     def filter_output(self, cutoff_frequency, plot=False):
+        """Aplica um filtro passa-baixas às saídas de todos os experimentos."""
         filtered_y_experiments = []
 
         for t, y in zip(self.t, self.y):
@@ -63,6 +78,7 @@ class ExperimentalFrequencyResponse:
         return self.y
 
     def plot_filter_output(self):
+        """Compara graficamente as saídas originais e filtradas."""
         if self.y_original is None:
             raise ValueError(
                 "filter_output must be called before plotting filtered data"
@@ -116,6 +132,7 @@ class ExperimentalFrequencyResponse:
             )
 
     def compute(self):
+        """Estima as respostas MIMO usando densidades espectrais de potência."""
         self.response = {}
         self.angular_frequencies = {}
 
@@ -147,6 +164,7 @@ class ExperimentalFrequencyResponse:
         return self.angular_frequencies, self.response
 
     def plot_exp_data(self):
+        """Gera gráficos dos sinais de entrada e saída de cada experimento."""
         plots_directory = Path(self.plots_dir)
         plots_directory.mkdir(parents=True, exist_ok=True)
 
@@ -182,6 +200,7 @@ class ExperimentalFrequencyResponse:
             )
 
     def plot_freq_resp(self, max_freq):
+        """Gera gráficos de magnitude e fase até a frequência angular limite."""
         if self.response is None or self.angular_frequencies is None:
             raise ValueError("compute must be called before plotting the response")
         if self.response.keys() != self.angular_frequencies.keys():
@@ -259,6 +278,7 @@ class ExperimentalFrequencyResponse:
 
 
 def main():
+    """Executa uma demonstração da análise MIMO com sinais sintéticos."""
     # Produção de sinais sintéticos
     sample_rate = 1000
     duration = 20

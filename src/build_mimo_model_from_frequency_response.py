@@ -1,3 +1,5 @@
+"""Construção e ajuste de um modelo MIMO reduzido de rotor."""
+
 from pathlib import Path
 
 import control as ct
@@ -10,6 +12,7 @@ import ross as rs
 
 
 def get_rotor():
+    """Monta e retorna o modelo de rotor com discos, eixo e mancais."""
     ## Shaft material creation ##
     steel = rs.Material(name="steel", rho=7850, E=1.9e11, Poisson=0.30)
     steel_m12 = rs.Material(name="steel", rho=7700, E=2e11, Poisson=0.31, color="red")
@@ -221,16 +224,16 @@ def get_rotor():
     ]
 
     mma = rs.MagneticBearingElement(
-            n=n_list[1],
-            g0=s0,
-            i0=i0,
-            ag=A,
-            nw=n,
-            alpha=alpha,
-            controller_transfer_function=c_24,
-            k_amp=k_amp,
-            k_sense=k_sense,
-        )
+        n=n_list[1],
+        g0=s0,
+        i0=i0,
+        ag=A,
+        nw=n,
+        alpha=alpha,
+        controller_transfer_function=c_24,
+        k_amp=k_amp,
+        k_sense=k_sense,
+    )
     print(f"ki = {mma.ki}")
     print(f"ks = {mma.ks}")
 
@@ -246,37 +249,50 @@ def get_rotor():
 
 
 class BuildMimoModelFromFrequencyResponse:
+    """Constrói e ajusta um modelo MIMO de rotor às respostas experimentais."""
+
     def __init__(self):
-        self.G = None
-        self.G_w13_response = None
-        self.G_v13_response = None
-        self.angular_frequencies = None
-        self.rotor = get_rotor()
-        self.x = None
-        self.n_u = None
-        self.n_x = None
-        self.node = None
-        self.n_amb = None
-        self.n_dof = None
-        self.k_x = None
-        self.k_s = None
-        self.k_i = None
-        self.original_model_v = None
-        self.original_model_w = None
-        self.G_v = None
-        self.G_w = None
-        self.speed = 0
-        self.amb = None
-        self.num_modes = 20
+        """Inicializa o rotor, o estado do modelo e os resultados do ajuste."""
+        # Respostas experimentais e resposta MIMO combinada.
+        self.G = None  # Resposta MIMO combinada.
+        self.G_w13_response = None  # Resposta experimental da direção W13.
+        self.G_v13_response = None  # Resposta experimental da direção V13.
+        self.angular_frequencies = None  # Frequências angulares dos experimentos.
 
-        self.Phi = None
-        self.M_m = None
-        self.C_m = None
-        self.K_m = None
+        # Modelo físico e dimensões do espaço de estados.
+        self.rotor = get_rotor()  # Modelo físico do rotor.
+        self.x = None  # Vetor de estado do modelo.
+        self.n_u = None  # Número de entradas do modelo.
+        self.n_x = None  # Número de estados do modelo.
+        self.node = None  # Nó de referência para atuadores ou sensores.
+        self.n_amb = None  # Número de atuadores magnéticos.
+        self.n_dof = None  # Número de graus de liberdade do rotor.
 
-        self.data_dir = "../data"
+        # Ganhos e respostas dos modelos original e ajustado.
+        self.k_x = None  # Matriz de rigidez de realimentação.
+        self.k_s = None  # Matriz de rigidez equivalente.
+        self.k_i = None  # Matriz de ganho de corrente.
+        self.original_model_v = None  # Modelo original na direção V13.
+        self.original_model_w = None  # Modelo original na direção W13.
+        self.G_v = None  # Resposta do modelo na direção V13.
+        self.G_w = None  # Resposta do modelo na direção W13.
+
+        # Configurações de operação e redução modal.
+        self.speed = 0  # Velocidade de rotação usada na montagem do rotor.
+        self.amb = None  # Configuração do mancal magnético.
+        self.num_modes = 20  # Número de modos mantidos na redução modal.
+
+        # Matrizes modais reduzidas.
+        self.Phi = None  # Matriz de modos selecionados.
+        self.M_m = None  # Matriz de massa no domínio modal.
+        self.C_m = None  # Matriz de amortecimento no domínio modal.
+        self.K_m = None  # Matriz de rigidez no domínio modal.
+
+        # Diretório dos arquivos de dados experimentais.
+        self.data_dir = "../data"  # Diretório de entrada e saída de dados.
 
     def process_rotor(self):
+        """Obtém as dimensões do rotor e inicializa seu vetor de estados."""
         self.n_dof = self.rotor.ndof
         self.n_dof = self.rotor.ndof
         self.n_x = 2 * self.n_dof
@@ -284,6 +300,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.x = np.zeros((self.n_x, 1))
 
     def setup_modal_domain(self):
+        """Calcula os modos do rotor e monta as matrizes modais reduzidas."""
         self.process_rotor()
 
         modal_reduction = True
@@ -317,7 +334,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.K_m = self.Phi.T @ K @ self.Phi
 
     def _build_model_response(self, k_x, k_i, show_pole_zero_map=False):
-        """Build the reduced model and return its complex frequency response."""
+        """Monta o modelo reduzido e retorna sua resposta complexa em frequência."""
         theta = np.pi / 4  # Bearing orientation angle (45 degrees)
         n_controllers = 2
 
@@ -388,6 +405,7 @@ class BuildMimoModelFromFrequencyResponse:
 
     @staticmethod
     def _gain_matrix(gains, name):
+        """Converte dois ganhos ou uma matriz 2x2 em uma matriz de ganhos."""
         gains = np.asarray(gains, dtype=float)
         if gains.shape == (2,):
             return np.diag(gains)
@@ -396,6 +414,7 @@ class BuildMimoModelFromFrequencyResponse:
         raise ValueError(f"{name} must contain two gains or be a 2x2 matrix.")
 
     def _experimental_responses(self):
+        """Valida e retorna frequências e respostas experimentais disponíveis."""
         if (
             self.angular_frequencies is None
             or self.G_v13_response is None
@@ -411,7 +430,9 @@ class BuildMimoModelFromFrequencyResponse:
             np.asarray(self.G_w13_response).squeeze(),
         )
         if omega.ndim != 1 or any(response.ndim != 1 for response in responses):
-            raise ValueError("Frequencies and experimental responses must be 1-D arrays.")
+            raise ValueError(
+                "Frequencies and experimental responses must be 1-D arrays."
+            )
         if any(response.size != omega.size for response in responses):
             raise ValueError(
                 "Frequencies and experimental responses must have the same length."
@@ -420,12 +441,18 @@ class BuildMimoModelFromFrequencyResponse:
 
     def optimize_gains(
         self,
-        initial_guess=(129012.78635407916, 129012.78635407916, 55.733523704962195, 55.733523704962195),
+        initial_guess=(
+            129012.78635407916,
+            129012.78635407916,
+            55.733523704962195,
+            55.733523704962195,
+        ),
         magnitude_weight=1.0,
         phase_weight=1.0,
         max_nfev=300,
         verbose=2,
     ):
+        """Otimiza ganhos para aproximar magnitude e fase experimentais."""
         _, experimental = self._experimental_responses()
         self.setup_modal_domain()
 
@@ -436,6 +463,7 @@ class BuildMimoModelFromFrequencyResponse:
         epsilon = np.finfo(float).tiny
 
         def residual(gains):
+            """Calcula o residual ponderado de magnitude e fase do modelo."""
             model_response = self._build_model_response(gains[:2], gains[2:])
             model_response = (model_response[0, 0, :], model_response[1, 1, :])
             model_magnitude = np.abs(np.asarray(model_response))
@@ -472,6 +500,7 @@ class BuildMimoModelFromFrequencyResponse:
         return result, self.k_x, self.k_i
 
     def build_model(self, k_x=None, k_i=None):
+        """Constrói o modelo reduzido e compara suas respostas com os dados."""
         omega = self.angular_frequencies
         self._experimental_responses()
         self.setup_modal_domain()
@@ -483,9 +512,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.k_x = self._gain_matrix(k_x, "k_x")
         self.k_s = self.k_x
         self.k_i = self._gain_matrix(k_i, "k_i")
-        model_response = self._build_model_response(
-            k_x, k_i, show_pole_zero_map=True
-        )
+        model_response = self._build_model_response(k_x, k_i, show_pole_zero_map=True)
 
         model_v13 = model_response[0, 0, :]
         model_phase_v13 = np.angle(model_v13)
@@ -514,9 +541,7 @@ class BuildMimoModelFromFrequencyResponse:
         plt.xlabel("Angular frequency [rad/s]")
         plt.ylabel("Phase [deg]")
 
-        fig.suptitle(
-            r"Open Loop Frequency Response $\rightarrow$ V13"
-        )
+        fig.suptitle(r"Open Loop Frequency Response $\rightarrow$ V13")
 
         fig = plt.figure(figsize=(6, 5), dpi=180)
         plt.subplot(2, 1, 1)
@@ -533,11 +558,10 @@ class BuildMimoModelFromFrequencyResponse:
         plt.xlabel("Angular frequency [rad/s]")
         plt.ylabel("Phase [deg]")
 
-        fig.suptitle(
-            r"Open Loop Frequency Response $\rightarrow$ W13"
-        )
+        fig.suptitle(r"Open Loop Frequency Response $\rightarrow$ W13")
 
     def get_open_loop_frequency_responses(self):
+        """Carrega, combina e salva as respostas experimentais em malha aberta."""
         data_v13 = np.load(
             Path(self.data_dir) / "T_v13_frequency_response_open_loop.npz"
         )
@@ -551,7 +575,9 @@ class BuildMimoModelFromFrequencyResponse:
 
         G = []
         for i in range(self.angular_frequencies.size):
-            G.append(np.block([[self.G_v13_response[i], 0], [0, self.G_w13_response[i]]]))
+            G.append(
+                np.block([[self.G_v13_response[i], 0], [0, self.G_w13_response[i]]])
+            )
 
         G = np.array(G)
         self.G = G
@@ -573,6 +599,7 @@ class BuildMimoModelFromFrequencyResponse:
 
 
 def main():
+    """Carrega respostas, constrói o modelo e executa o ajuste de ganhos."""
     build_model = BuildMimoModelFromFrequencyResponse()
     build_model.get_open_loop_frequency_responses()
     build_model.build_model()

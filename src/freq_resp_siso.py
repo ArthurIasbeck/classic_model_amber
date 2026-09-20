@@ -1,3 +1,5 @@
+"""Entrypoints para calcular respostas em frequência SISO experimentais."""
+
 from dataset import Dataset
 from experimental_frequency_response_siso import ExperimentalFrequencyResponseSiso
 from loguru import logger
@@ -5,6 +7,7 @@ from matplotlib import pyplot as plt
 
 
 def main_v13():
+    """Processa os experimentos da direção V13 e calcula sua resposta SISO."""
     dataset_0 = Dataset(file_path="../data/chirp_v13_0.csv")
     dataset_1 = Dataset(file_path="../data/chirp_v13_1.txt")
     dataset_2 = Dataset(file_path="../data/chirp_v13_2.txt")
@@ -42,6 +45,7 @@ def main_v13():
 
 
 def main_w13():
+    """Processa os experimentos da direção W13 e calcula sua resposta SISO."""
     dataset_1 = Dataset(file_path="../data/chirp_w13_1.txt")
     dataset_2 = Dataset(file_path="../data/chirp_w13_2.txt")
     dataset_3 = Dataset(file_path="../data/chirp_w13_3.txt")

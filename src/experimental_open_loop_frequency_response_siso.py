@@ -1,3 +1,5 @@
+"""Conversão de respostas SISO em malha fechada para malha aberta."""
+
 from pathlib import Path
 
 import control as ct
@@ -6,6 +8,7 @@ from matplotlib import pyplot as plt
 
 
 def get_controller():
+    """Constrói e retorna a função de transferência do controlador."""
     csiN1_W13_DE = 0.08
     fN1_W13_DE = 2.324778563656447e3
 
@@ -43,16 +46,27 @@ def get_controller():
 
 
 class ExperimentalOpenLoopFrequencyResponseSiso:
-    def __init__(self, data_name, plots_dir="../plots", data_dir="../data"):
-        self.H = None  # Open-loop frequency response
-        self.data_name = data_name
-        self.plots_dir = plots_dir
-        self.data_dir = data_dir
+    """Calcula e visualiza a resposta SISO experimental em malha aberta."""
 
+    def __init__(self, data_name, plots_dir="../plots", data_dir="../data"):
+        """Carrega uma resposta em malha fechada e prepara seus dados.
+
+        Args:
+            data_name: Nome-base do arquivo NPZ da resposta em malha fechada.
+            plots_dir: Diretório para salvar gráficos.
+            data_dir: Diretório que contém os dados experimentais.
+        """
+        # Identificação e diretórios de entrada e saída.
+        self.data_name = data_name  # Nome-base dos arquivos de resposta.
+        self.plots_dir = plots_dir  # Diretório dos gráficos gerados.
+        self.data_dir = data_dir  # Diretório dos dados experimentais.
+
+        # Resposta calculada e resposta experimental em malha fechada.
+        self.H = None  # Resposta calculada em malha aberta.
         data = np.load(Path(self.data_dir) / f"{self.data_name}_frequency_response.npz")
 
-        self.close_loop_fr = data["response"]
-        self.angular_frequencies = data["angular_frequencies"]
+        self.close_loop_fr = data["response"]  # Resposta em malha fechada.
+        self.angular_frequencies = data["angular_frequencies"]  # Frequências angulares.
 
         angular_freq_mask = (self.angular_frequencies > 4) & (
             self.angular_frequencies < 600
@@ -61,6 +75,7 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
         self.close_loop_fr = self.close_loop_fr[angular_freq_mask]
 
     def compute_open_loop_freq_resp(self, plot=True):
+        """Calcula, salva e opcionalmente plota a resposta em malha aberta."""
         C = get_controller()
         omega = self.angular_frequencies
         controller_magnitude, controller_phase, _ = ct.frequency_response(C, omega)
@@ -124,6 +139,7 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             )
 
     def remove_delay(self, plot=True):
+        """Avalia atrasos candidatos e plota seu efeito sobre a fase da resposta."""
         omega = self.angular_frequencies
         f_obj_values = []
         tau_values = np.linspace(0, 0.25, 1000)
