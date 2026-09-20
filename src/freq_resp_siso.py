@@ -19,15 +19,19 @@ def main_v13():
     t_4, i_4, d_4, y_4 = dataset_4.load()
     logger.info("Carregamento dos dados concluído.")
 
-    t = [t_0, t_1, t_2, t_3, t_4]
-    d = [d_0[0, :], d_1[0, :], d_2[0, :], d_3[0, :], d_4[0, :]]
-    y = [y_0[0, :], y_1[0, :], y_2[0, :], y_3[0, :], y_4[0, :]]
+    # t = [t_0, t_1, t_2, t_3, t_4]
+    # d = [d_0[0, :], d_1[0, :], d_2[0, :], d_3[0, :], d_4[0, :]]
+    # y = [y_0[0, :], y_1[0, :], y_2[0, :], y_3[0, :], y_4[0, :]]
+
+    t = [t_0]
+    d = [d_0[0, :]]
+    y = [y_0[0, :]]
 
     experimental_freq_resp = ExperimentalFrequencyResponseSiso("T_v13", t, d, y)
 
     logger.info("Iniciando filtragem dos dados...")
     experimental_freq_resp.filter_output(cutoff_frequency=600)
-    experimental_freq_resp.plot_filter_output()
+    # experimental_freq_resp.plot_filter_output()
     logger.info("Filtragem dos dados concluída.")
 
     logger.info("Iniciando recorte dos dados...")
@@ -35,10 +39,10 @@ def main_v13():
     experimental_freq_resp.plot_exp_data()
     logger.info("Recorte dos dados concluído.")
 
-    logger.info("Iniciando computação da resposta em frequência...")
-    experimental_freq_resp.compute()
-    experimental_freq_resp.plot_freq_resp(min_freq=1, max_freq=600)
-    logger.info("Computação da resposta em frequência concluída.")
+    # logger.info("Iniciando computação da resposta em frequência...")
+    # experimental_freq_resp.compute()
+    # experimental_freq_resp.plot_freq_resp(min_freq=1, max_freq=600)
+    # logger.info("Computação da resposta em frequência concluída.")
 
 
 def main_w13():
@@ -77,6 +81,6 @@ def main_w13():
 
 
 if __name__ == "__main__":
-    # main_v13()
-    main_w13()
+    main_v13()
+    # main_w13()
     plt.show()

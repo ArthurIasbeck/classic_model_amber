@@ -12,6 +12,16 @@ opts = bodeoptions;
 opts.PhaseWrapping = 'on';
 opts.PhaseWrappingBranch = 0;
 bode(data, sys, w, opts)
+[mag_data, phase_data, w_data] = bode(data, w);
+[mag_sys, phase_sys, ~] = bode(sys, w);
+
+mag_data = squeeze(mag_data);
+phase_data = squeeze(phase_data);
+mag_sys = squeeze(mag_sys);
+phase_sys = squeeze(phase_sys);
+w_data = squeeze(w_data);
+writematrix([w_data(:), mag_data(:), phase_data(:), mag_sys(:), phase_sys(:)], ...
+    "../data/ident_freq_v13_freq.txt");
 
 csiN1_W13_DE = 0.08;
 fN1_W13_DE = 2.324778563656447e3;
@@ -43,6 +53,9 @@ d = d(~isnan(d));
 t = linspace(t(1), t(end), size(t, 1));
 y = lsim(T, -d, t);
 i = lsim(U, -d, t);
+i_real_plot = i_real - mean(i_real);
+writematrix([t(:), y(:), y_real(:), i(:), i_real_plot(:)], ...
+    "../data/ident_freq_v13_time.txt");
 
 figure;
 plot(t, y); hold on;
@@ -52,6 +65,6 @@ legend("Model", "Experiment")
 
 figure;
 plot(t, i); hold on;
-plot(t, i_real - mean(i_real));
+plot(t, i_real_plot);
 grid on;
 legend("Model", "Experiment")

@@ -3,9 +3,28 @@ from pathlib import Path
 import control
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FuncFormatter
 from scipy.signal import butter, sosfiltfilt
 
 from utils import interpolate_signals
+
+plt.rcParams.update(
+    {
+        "font.family": "TeX Gyre Termes",
+        "font.size": 14,
+        "axes.labelsize": 16,
+        "axes.titlesize": 16,
+        "xtick.labelsize": 13,
+        "ytick.labelsize": 13,
+        "legend.fontsize": 13,
+        "figure.titlesize": 18,
+        "svg.fonttype": "none",
+    }
+)
+
+
+def _format_decimal_comma(value, _):
+    return f"{value:g}".replace(".", ",")
 
 
 class ExperimentalFrequencyResponseSiso:
@@ -44,8 +63,10 @@ class ExperimentalFrequencyResponseSiso:
 
         if plot:
             plt.xlabel("Amostra")
-            plt.ylabel("Time Difference")
-            plt.title("Difference in Time Steps")
+            plt.ylabel("Diferença de tempo")
+            plt.title("Diferença entre passos de tempo")
+            plt.gca().xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+            plt.gca().yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
             plt.grid(True)
             plt.tight_layout()
             plt.savefig(
@@ -144,10 +165,12 @@ class ExperimentalFrequencyResponseSiso:
                 filtered_y_plot,
                 color="C3",
                 linestyle="-",
-                label="Filtered",
+                label="Filtrado",
             )
             axis.set_ylabel(r"$y$ [$\mu$m]")
-            axis.set_xlabel("Time (s)")
+            axis.set_xlabel("Tempo (s)")
+            axis.xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+            axis.yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
             axis.grid(True)
             axis.legend(loc="upper right")
             figure.tight_layout()
@@ -204,17 +227,20 @@ class ExperimentalFrequencyResponseSiso:
         ):
             t_plot, u_plot = interpolate_signals(t, np.asarray(u))
             _, y_plot = interpolate_signals(t, np.asarray(y))
-            figure, axis = plt.subplots(figsize=(8, 6), dpi=200)
+            figure, axis = plt.subplots(figsize=(8, 6))
             output_axis = axis.twinx()
 
-            input_line = axis.plot(t_plot, u_plot, label=rf"$u$ [$\mu$ m]")
+            input_line = axis.plot(t_plot, u_plot, label=rf"Perturbação ($\mu$m)")
             output_line = output_axis.plot(
-                t_plot, y_plot, color="C1", label=rf"$y$ [$\mu$ m]"
+                t_plot, y_plot, color="C1", label=rf"Deslocamento ($\mu$m)"
             )
 
-            axis.set_xlabel("Time (s)")
-            axis.set_ylabel(r"Input amplitude [$\mu$ m]")
-            output_axis.set_ylabel(r"Output amplitude [$\mu$ m]")
+            axis.set_xlabel("Tempo (s)")
+            axis.set_ylabel(r"Amplitude da perturbação ($\mu$m)")
+            output_axis.set_ylabel(r"Amplitude do deslocamento ($\mu$m)")
+            axis.xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+            axis.yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+            output_axis.yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
             axis.grid(True)
             axis.legend(
                 input_line + output_line,
@@ -222,7 +248,7 @@ class ExperimentalFrequencyResponseSiso:
                 loc="upper right",
             )
 
-            figure.suptitle(f"Experiment {experiment_index}")
+            figure.suptitle(f"Experimento {experiment_index}")
             figure.tight_layout()
             figure.savefig(
                 plots_directory / f"experimental_data_{experiment_index}.svg",
@@ -264,13 +290,17 @@ class ExperimentalFrequencyResponseSiso:
 
         axes[0, 0].semilogx(angular_frequency_plot, magnitude_plot)
         axes[0, 0].set_ylabel("Magnitude (dB)")
+        axes[0, 0].xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+        axes[0, 0].yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
         axes[0, 0].grid(True, which="both")
 
         axes[1, 0].semilogx(angular_frequency_plot, phase_plot * 180 / np.pi)
-        axes[1, 0].set_ylabel("Phase (degrees)")
+        axes[1, 0].set_ylabel("Fase (graus)")
+        axes[1, 0].xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
+        axes[1, 0].yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
         axes[1, 0].grid(True, which="both")
 
-        fig.suptitle("Experimental frequency-response magnitude")
+        fig.suptitle("Magnitude da resposta em frequência experimental")
         fig.tight_layout()
 
         plots_directory = Path(self.plots_dir)

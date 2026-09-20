@@ -100,8 +100,8 @@ def get_rotor():
             shear_effects=True,
             rotary_inertia=True,
             gyroscopic=True,
-            alpha=2.5,
-            beta=1e-4,
+            alpha=4,
+            beta=1e-3,
         )
         for l, idl, odl in zip(L, i_d, o_d)
     ]
@@ -229,17 +229,17 @@ def get_rotor():
         #     k_amp=k_amp,
         #     k_sense=k_sense,
         # ),
-        rs.MagneticBearingElement(
-            n=n_list[1],
-            g0=s0,
-            i0=i0,
-            ag=A,
-            nw=n,
-            alpha=alpha,
-            controller_transfer_function=c_24,
-            k_amp=k_amp,
-            k_sense=k_sense,
-        ),
+        # rs.MagneticBearingElement(
+        #     n=n_list[1],
+        #     g0=s0,
+        #     i0=i0,
+        #     ag=A,
+        #     nw=n,
+        #     alpha=alpha,
+        #     controller_transfer_function=c_24,
+        #     k_amp=k_amp,
+        #     k_sense=k_sense,
+        # ),
     ]
 
     mma = rs.MagneticBearingElement(
@@ -289,7 +289,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.G_w = None
         self.speed = 0
         self.amb = None
-        self.num_modes = 10
+        self.num_modes = 20
 
         self.Phi = None
         self.M_m = None
@@ -338,7 +338,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.C_m = self.Phi.T @ C @ self.Phi
         self.K_m = self.Phi.T @ K @ self.Phi
 
-    def _build_model_response(self, k_x, k_i):
+    def _build_model_response(self, k_x, k_i, show_pole_zero_map=False):
         """Build the reduced model and return its complex frequency response."""
         theta = np.pi / 4  # Bearing orientation angle (45 degrees)
         n_controllers = 2
@@ -372,10 +372,37 @@ class BuildMimoModelFromFrequencyResponse:
 
         A_star = A + B @ phi @ K_x @ R @ phi_t @ Phi @ H
         B_star = B @ phi @ K_i
-        C_star = R @ phi_t @ Phi @ H
+        C_star = 1e6 * R @ phi_t @ Phi @ H
         D_star = zeros(n_c, n_c)
 
         model = ct.ss(A_star, B_star, C_star, D_star)
+
+        if show_pole_zero_map:
+            model_for_pole_zero_map = ct.minreal(model, tol=1e-3, verbose=False)
+            poles = ct.poles(model_for_pole_zero_map)
+            zeros = ct.zeros(model_for_pole_zero_map)
+
+            fig, ax = plt.subplots(figsize=(6, 5), dpi=180)
+            ax.plot(poles.real, poles.imag, "x", ms=8, mew=1.5, label="Poles")
+            ax.plot(
+                zeros.real,
+                zeros.imag,
+                "o",
+                ms=7,
+                mfc="none",
+                mew=1.5,
+                label="Zeros",
+            )
+            ax.axhline(0, color="black", linewidth=0.8)
+            ax.axvline(0, color="black", linewidth=0.8)
+            ax.set_xlabel("Real axis")
+            ax.set_ylabel("Imaginary axis")
+            ax.set_title("Pole-zero map of the reduced model")
+            ax.grid(True)
+            ax.legend()
+
+            fig.tight_layout()
+
         model_mag, model_phase, _ = ct.frequency_response(
             model, self.angular_frequencies
         )
@@ -415,28 +442,28 @@ class BuildMimoModelFromFrequencyResponse:
 
     def optimize_gains(
         self,
-        initial_guess=(-130_000.0, -130_000.0, 55.0, 55.0),
-        bounds=((-1e6, -1e6, 0.0, 0.0), (0.0, 0.0, 1e4, 1e4)),
+        initial_guess=(129012.78635407916, 129012.78635407916, 55.733523704962195, 55.733523704962195),
+        # bounds=((-1e6, -1e6, 0.0, 0.0), (0.0, 0.0, 1e4, 1e4)),
         magnitude_weight=1.0,
         phase_weight=1.0,
-        max_nfev=100,
+        max_nfev=300,
         verbose=2,
     ):
         _, experimental = self._experimental_responses()
         self.setup_modal_domain()
 
         initial_guess = np.asarray(initial_guess, dtype=float)
-        lower, upper = (np.asarray(bound, dtype=float) for bound in bounds)
-        if initial_guess.shape != (4,):
-            raise ValueError("initial_guess must contain four diagonal gains.")
-        if lower.shape != (4,) or upper.shape != (4,):
-            raise ValueError("bounds must contain four lower and four upper limits.")
-        if np.any(initial_guess < lower) or np.any(initial_guess > upper):
-            raise ValueError("initial_guess must be inside bounds.")
-        if magnitude_weight < 0 or phase_weight < 0:
-            raise ValueError("Residual weights must be non-negative.")
-        if magnitude_weight == 0 and phase_weight == 0:
-            raise ValueError("At least one residual weight must be positive.")
+        # lower, upper = (np.asarray(bound, dtype=float) for bound in bounds)
+        # if initial_guess.shape != (4,):
+        #     raise ValueError("initial_guess must contain four diagonal gains.")
+        # if lower.shape != (4,) or upper.shape != (4,):
+        #     raise ValueError("bounds must contain four lower and four upper limits.")
+        # if np.any(initial_guess < lower) or np.any(initial_guess > upper):
+        #     raise ValueError("initial_guess must be inside bounds.")
+        # if magnitude_weight < 0 or phase_weight < 0:
+        #     raise ValueError("Residual weights must be non-negative.")
+        # if magnitude_weight == 0 and phase_weight == 0:
+        #     raise ValueError("At least one residual weight must be positive.")
 
         experimental_magnitude = np.abs(np.asarray(experimental))
         experimental_phase = np.angle(np.asarray(experimental))
@@ -485,13 +512,15 @@ class BuildMimoModelFromFrequencyResponse:
         self.setup_modal_domain()
 
         if k_x is None:
-            k_x = (-50_000.0, -50_000.0)
+            k_x = (129012.78635407916, 129012.78635407916)
         if k_i is None:
-            k_i = (100.0, 100.0)
+            k_i = (55.733523704962195, 55.733523704962195)
         self.k_x = self._gain_matrix(k_x, "k_x")
         self.k_s = self.k_x
         self.k_i = self._gain_matrix(k_i, "k_i")
-        model_response = self._build_model_response(k_x, k_i)
+        model_response = self._build_model_response(
+            k_x, k_i, show_pole_zero_map=True
+        )
 
         model_v13 = model_response[0, 0, :]
         model_phase_v13 = np.angle(model_v13)
@@ -587,7 +616,7 @@ def main():
 
     build_model = BuildMimoModelFromFrequencyResponse()
     build_model.get_open_loop_frequency_responses()
-    # build_model.build_model()
+    build_model.build_model()
 
     # result, K_x, K_i = build_model.optimize_gains()
     # build_model.build_model(K_x, K_i)
