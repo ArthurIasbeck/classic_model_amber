@@ -26,6 +26,14 @@ class Dataset:
     def load(self):
         suffix = Path(self.file_path).suffix.lower()
 
+        if suffix == ".npz":
+            with np.load(self.file_path) as data:
+                self.t = data["t"]
+                self.i = data["i"]
+                self.d = data["d"]
+                self.y = data["y"]
+            return self.t, self.i, self.d, self.y
+
         if suffix == ".txt":
             return self.load_txt()
         if suffix == ".csv":
@@ -312,12 +320,13 @@ class Dataset:
         _, d_plot = interpolate_signals(self.t, self.d)
         _, y_plot = interpolate_signals(self.t, self.y)
 
+        legend_loc = "upper left"
         plt.figure(figsize=(8, 4), dpi=250)
         plt.plot(t_plot, np.transpose(i_plot))
         plt.title("Current")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
-        plt.legend(["$i_1$", "$i_2$", "$i_3$", "$i_4$"], loc="upper left")
+        plt.legend(["$i_1$", "$i_2$", "$i_3$", "$i_4$"], loc=legend_loc)
         plt.tight_layout()
         plt.grid()
         plt.savefig(plots_dir / (self.file_name + ".svg"), format="svg")
@@ -327,7 +336,7 @@ class Dataset:
         plt.title("Disturbance")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
-        plt.legend(["$d_1$", "$d_2$", "$d_3$", "$d_4$"], loc="upper left")
+        plt.legend(["$d_1$", "$d_2$", "$d_3$", "$d_4$"], loc=legend_loc)
         plt.tight_layout()
         plt.grid()
         plt.savefig(plots_dir / (self.file_name + "_disturbance.svg"), format="svg")
@@ -337,7 +346,7 @@ class Dataset:
         plt.title("Output")
         plt.xlabel("Time")
         plt.ylabel("Amplitude")
-        plt.legend(["$y_1$", "$y_2$", "$y_3$", "$y_4$"], loc="upper left")
+        plt.legend(["$y_1$", "$y_2$", "$y_3$", "$y_4$"], loc=legend_loc)
         plt.tight_layout()
         plt.grid()
         plt.savefig(plots_dir / (self.file_name + "_output.svg"), format="svg")
@@ -347,7 +356,7 @@ if __name__ == "__main__":
     load_data = Dataset(file_path="../data/chirp_v13_0.csv")
     load_data.load()
     load_data.plot()
-    # load_data.plot_crosscorrelation()
-    # load_data.plot_autocorrelation()
+    load_data.plot_crosscorrelation()
+    load_data.plot_autocorrelation()
     load_data.compute_fft()
     plt.show()

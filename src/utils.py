@@ -2,7 +2,6 @@ import numpy as np
 
 
 def interpolate_signals_mimo(x, data):
-    """Interpolate multiple signals onto an evenly spaced independent axis."""
     n_plot_points = 1_000_000
     x = np.asarray(x)
     data = np.asarray(data)
@@ -18,7 +17,6 @@ def interpolate_signals_mimo(x, data):
 
 
 def interpolate_signal_siso(x, data):
-    """Interpolate a single signal onto an evenly spaced independent axis."""
     n_plot_points = 1_000_000
     x = np.asarray(x)
     data = np.asarray(data)
@@ -34,7 +32,6 @@ def interpolate_signal_siso(x, data):
 
 
 def interpolate_signals(x, data):
-    """Interpolate one or multiple signals onto an evenly spaced axis."""
     data = np.asarray(data)
     if data.ndim == 1:
         return interpolate_signal_siso(x, data)

@@ -43,11 +43,11 @@ def get_controller():
 
 
 class ExperimentalOpenLoopFrequencyResponseSiso:
-    def __init__(self, data_name):
+    def __init__(self, data_name, plots_dir="../plots", data_dir="../data"):
         self.H = None  # Open-loop frequency response
         self.data_name = data_name
-        self.plots_dir = "../plots"
-        self.data_dir = "../data"
+        self.plots_dir = plots_dir
+        self.data_dir = data_dir
 
         data = np.load(Path(self.data_dir) / f"{self.data_name}_frequency_response.npz")
 
@@ -80,6 +80,9 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
         )
 
         if plot:
+            ang_freq_label = "Angular frequency [rad/s]"
+            phase_freq_label = "Phase [deg]"
+
             fig = plt.figure(figsize=(6, 5), dpi=180)
             plt.subplot(2, 1, 1)
             plt.semilogx(omega[omega < 600], 20 * np.log10(controller_magnitude))
@@ -89,10 +92,10 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             plt.subplot(2, 1, 2)
             plt.semilogx(omega, np.rad2deg(controller_phase))
             plt.grid()
-            plt.xlabel("Angular frequency [rad/s]")
-            plt.ylabel("Phase [deg]")
+            plt.xlabel(ang_freq_label)
+            plt.ylabel(phase_freq_label)
 
-            fig.suptitle(f"Controller Frequency Response")
+            fig.suptitle("Controller Frequency Response")
             plt.savefig(
                 Path(self.plots_dir)
                 / f"controller_frequency_response_{self.data_name}.svg",
@@ -108,8 +111,8 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             plt.subplot(2, 1, 2)
             plt.semilogx(omega, np.rad2deg(phase))
             plt.grid()
-            plt.xlabel("Angular frequency [rad/s]")
-            plt.ylabel("Phase [deg]")
+            plt.xlabel(ang_freq_label)
+            plt.ylabel(phase_freq_label)
 
             fig.suptitle(
                 rf"Open Loop Frequency Response $\rightarrow$ {self.data_name}"
@@ -141,7 +144,7 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             plt.tight_layout()
 
             plt.savefig(
-                Path(self.plots_dir) / f"objetive_function_delay.svg",
+                Path(self.plots_dir) / "objetive_function_delay.svg",
                 format="svg",
             )
 
@@ -166,6 +169,6 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             plt.legend()
 
             plt.savefig(
-                Path(self.plots_dir) / f"compare_original_delay_removed.svg",
+                Path(self.plots_dir) / "compare_original_delay_removed.svg",
                 format="svg",
             )

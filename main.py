@@ -3,13 +3,44 @@ from experimental_frequency_response_siso import ExperimentalFrequencyResponseSi
 from loguru import logger
 from matplotlib import pyplot as plt
 
+from experimental_open_loop_frequency_response_siso import (
+    ExperimentalOpenLoopFrequencyResponseSiso,
+)
+
+
+def main_v13_ol():
+    open_loop_freq_response_siso = ExperimentalOpenLoopFrequencyResponseSiso(
+        "T_v13", "plots", "data"
+    )
+
+    logger.info("Computando resposta em frequência de malha aberta...")
+    open_loop_freq_response_siso.compute_open_loop_freq_resp(plot=True)
+    logger.info("Resposta em frequência de malha aberta computada com sucesso.")
+
+    logger.info("Iniciando otimização para determinação do delay...")
+    open_loop_freq_response_siso.remove_delay(plot=True)
+    logger.info("Otimização para determinação do delay concluída com sucesso.")
+
+
+def main_w13_ol():
+    open_loop_freq_response_siso = ExperimentalOpenLoopFrequencyResponseSiso(
+        "T_w13", "plots", "data"
+    )
+    logger.info("Computando resposta em frequência de malha aberta...")
+    open_loop_freq_response_siso.compute_open_loop_freq_resp(plot=True)
+    logger.info("Resposta em frequência de malha aberta computada com sucesso.")
+
+    logger.info("Iniciando otimização para determinação do delay...")
+    open_loop_freq_response_siso.remove_delay(plot=True)
+    logger.info("Otimização para determinação do delay concluída com sucesso.")
+
 
 def main_v13():
-    dataset_0 = Dataset(file_path="../data/chirp_v13_0.csv")
-    dataset_1 = Dataset(file_path="../data/chirp_v13_1.txt")
-    dataset_2 = Dataset(file_path="../data/chirp_v13_2.txt")
-    dataset_3 = Dataset(file_path="../data/chirp_v13_3.txt")
-    dataset_4 = Dataset(file_path="../data/chirp_v13_4.txt")
+    dataset_0 = Dataset(file_path="data/chirp_v13_0.npz")
+    dataset_1 = Dataset(file_path="data/chirp_v13_1.npz")
+    dataset_2 = Dataset(file_path="data/chirp_v13_2.npz")
+    dataset_3 = Dataset(file_path="data/chirp_v13_3.npz")
+    dataset_4 = Dataset(file_path="data/chirp_v13_4.npz")
 
     logger.info("Iniciando carregamento dos dados...")
     t_0, _, d_0, y_0 = dataset_0.load()
@@ -23,7 +54,9 @@ def main_v13():
     d = [d_0[0, :], d_1[0, :], d_2[0, :], d_3[0, :], d_4[0, :]]
     y = [y_0[0, :], y_1[0, :], y_2[0, :], y_3[0, :], y_4[0, :]]
 
-    experimental_freq_resp = ExperimentalFrequencyResponseSiso("T_v13", t, d, y)
+    experimental_freq_resp = ExperimentalFrequencyResponseSiso(
+        "T_v13", t, d, y, "data", "plots"
+    )
 
     logger.info("Iniciando filtragem dos dados...")
     experimental_freq_resp.filter_output(cutoff_frequency=600)
@@ -42,10 +75,10 @@ def main_v13():
 
 
 def main_w13():
-    dataset_1 = Dataset(file_path="../data/chirp_w13_1.txt")
-    dataset_2 = Dataset(file_path="../data/chirp_w13_2.txt")
-    dataset_3 = Dataset(file_path="../data/chirp_w13_3.txt")
-    dataset_4 = Dataset(file_path="../data/chirp_w13_4.txt")
+    dataset_1 = Dataset(file_path="data/chirp_w13_1.npz")
+    dataset_2 = Dataset(file_path="data/chirp_w13_2.npz")
+    dataset_3 = Dataset(file_path="data/chirp_w13_3.npz")
+    dataset_4 = Dataset(file_path="data/chirp_w13_4.npz")
 
     logger.info("Iniciando carregamento dos dados...")
     t_1, _, d_1, y_1 = dataset_1.load()
@@ -58,7 +91,9 @@ def main_w13():
     d = [d_1[1, :], d_2[1, :], d_3[1, :], d_4[1, :]]
     y = [y_1[1, :], y_2[1, :], y_3[1, :], y_4[1, :]]
 
-    experimental_freq_resp = ExperimentalFrequencyResponseSiso("T_w13", t, d, y)
+    experimental_freq_resp = ExperimentalFrequencyResponseSiso(
+        "T_w13", t, d, y, "data", "plots"
+    )
 
     logger.info("Iniciando filtragem dos dados...")
     experimental_freq_resp.filter_output(cutoff_frequency=600)
@@ -77,6 +112,15 @@ def main_w13():
 
 
 if __name__ == "__main__":
+    logger.info("Computação da resposta em frequência de malha fechada do eixo V13")
     main_v13()
+
+    logger.info("Computação da resposta em frequência de malha fechada do eixo W13")
     main_w13()
+
+    logger.info("Computação da resposta em frequência de malha aberta do eixo V13")
+    main_v13_ol()
+
+    logger.info("Computação da resposta em frequência de malha aberta do eixo W13")
+    main_w13_ol()
     plt.show()

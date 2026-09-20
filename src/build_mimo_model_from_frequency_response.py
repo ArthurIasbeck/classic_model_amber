@@ -1,14 +1,12 @@
 from pathlib import Path
 
+import control as ct
 import numpy as np
 from matplotlib import pyplot as plt
-
-import ross as rs
-import control as ct
-from scipy.linalg import eigh, block_diag
+from scipy.linalg import eigh
 from scipy.optimize import least_squares
 
-from ross import MagneticBearingElement
+import ross as rs
 
 
 def get_rotor():
@@ -173,26 +171,6 @@ def get_rotor():
     i0 = 1.0
     s0 = 0.432e-3
     alpha = 0.392
-    # c_13 = (
-    #     1e6
-    #     * 0.0062
-    #     * (s + 46)
-    #     / s
-    #     * 0.0062
-    #     * (400 / 77)
-    #     * ((s + 77 * 2 * np.pi) / (s + 400 * 2 * np.pi))
-    #     * (409 / 124)
-    #     * ((s + 124 * 2 * np.pi) / (s + 409 * 2 * np.pi))
-    #     * ct.tf(
-    #         [1, 371.964570185032, 5404595.37003653],
-    #         [1, 1301.87599564761, 3095107.94018162],
-    #     )
-    #     * ct.tf(
-    #         [1, 282.743338823081, 22206609.9024511],
-    #         [1, 1337.06183336782, 17458343.225087],
-    #     )
-    #     * 0.4
-    # )
 
     c_24 = (
         1e6
@@ -303,7 +281,7 @@ class BuildMimoModelFromFrequencyResponse:
         self.n_dof = self.rotor.ndof
         self.n_x = 2 * self.n_dof
         self.n_u = self.n_dof
-        self.x = np.zeros((self.n_x, 1))  # TODO: Verificar se é necessário
+        self.x = np.zeros((self.n_x, 1))
 
     def setup_modal_domain(self):
         self.process_rotor()
@@ -443,7 +421,6 @@ class BuildMimoModelFromFrequencyResponse:
     def optimize_gains(
         self,
         initial_guess=(129012.78635407916, 129012.78635407916, 55.733523704962195, 55.733523704962195),
-        # bounds=((-1e6, -1e6, 0.0, 0.0), (0.0, 0.0, 1e4, 1e4)),
         magnitude_weight=1.0,
         phase_weight=1.0,
         max_nfev=300,
@@ -453,17 +430,6 @@ class BuildMimoModelFromFrequencyResponse:
         self.setup_modal_domain()
 
         initial_guess = np.asarray(initial_guess, dtype=float)
-        # lower, upper = (np.asarray(bound, dtype=float) for bound in bounds)
-        # if initial_guess.shape != (4,):
-        #     raise ValueError("initial_guess must contain four diagonal gains.")
-        # if lower.shape != (4,) or upper.shape != (4,):
-        #     raise ValueError("bounds must contain four lower and four upper limits.")
-        # if np.any(initial_guess < lower) or np.any(initial_guess > upper):
-        #     raise ValueError("initial_guess must be inside bounds.")
-        # if magnitude_weight < 0 or phase_weight < 0:
-        #     raise ValueError("Residual weights must be non-negative.")
-        # if magnitude_weight == 0 and phase_weight == 0:
-        #     raise ValueError("At least one residual weight must be positive.")
 
         experimental_magnitude = np.abs(np.asarray(experimental))
         experimental_phase = np.angle(np.asarray(experimental))
@@ -491,7 +457,6 @@ class BuildMimoModelFromFrequencyResponse:
         result = least_squares(
             residual,
             initial_guess,
-            # bounds=(lower, upper),
             max_nfev=max_nfev,
             x_scale="jac",
             verbose=verbose,
@@ -550,7 +515,7 @@ class BuildMimoModelFromFrequencyResponse:
         plt.ylabel("Phase [deg]")
 
         fig.suptitle(
-            rf"Open Loop Frequency Response $\rightarrow$ V13"
+            r"Open Loop Frequency Response $\rightarrow$ V13"
         )
 
         fig = plt.figure(figsize=(6, 5), dpi=180)
@@ -569,15 +534,15 @@ class BuildMimoModelFromFrequencyResponse:
         plt.ylabel("Phase [deg]")
 
         fig.suptitle(
-            rf"Open Loop Frequency Response $\rightarrow$ W13"
+            r"Open Loop Frequency Response $\rightarrow$ W13"
         )
 
     def get_open_loop_frequency_responses(self):
         data_v13 = np.load(
-            Path(self.data_dir) / f"T_v13_frequency_response_open_loop.npz"
+            Path(self.data_dir) / "T_v13_frequency_response_open_loop.npz"
         )
         data_w13 = np.load(
-            Path(self.data_dir) / f"T_w13_frequency_response_open_loop.npz"
+            Path(self.data_dir) / "T_w13_frequency_response_open_loop.npz"
         )
 
         self.angular_frequencies = data_v13["angular_frequencies"]
@@ -608,18 +573,12 @@ class BuildMimoModelFromFrequencyResponse:
 
 
 def main():
-    # rotor = get_rotor()
-    # figure = rotor.plot_rotor(nodes=999)
-    # output_path = Path(__file__).resolve().parent.parent / "plots" / "rotor.png"
-    # figure.write_image(output_path, scale=10)
-    # figure.show()
-
     build_model = BuildMimoModelFromFrequencyResponse()
     build_model.get_open_loop_frequency_responses()
     build_model.build_model()
 
-    # result, K_x, K_i = build_model.optimize_gains()
-    # build_model.build_model(K_x, K_i)
+    _, K_x, K_i = build_model.optimize_gains()
+    build_model.build_model(K_x, K_i)
 
 
 if __name__ == "__main__":

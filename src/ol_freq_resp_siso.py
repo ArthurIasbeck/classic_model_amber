@@ -5,21 +5,21 @@ from experimental_open_loop_frequency_response_siso import (
 )
 
 
-def main_v13():
+def main_v13_ol():
     open_loop_freq_response_siso = ExperimentalOpenLoopFrequencyResponseSiso("T_v13")
     open_loop_freq_response_siso.compute_open_loop_freq_resp(plot=True)
     open_loop_freq_response_siso.remove_delay(plot=True)
 
 
-def main_w13():
+def main_w13_ol():
     open_loop_freq_response_siso = ExperimentalOpenLoopFrequencyResponseSiso("T_w13")
     open_loop_freq_response_siso.compute_open_loop_freq_resp(plot=True)
     open_loop_freq_response_siso.remove_delay(plot=True)
 
 
 def main():
-    main_v13()
-    main_w13()
+    main_v13_ol()
+    main_w13_ol()
 
 
 if __name__ == "__main__":

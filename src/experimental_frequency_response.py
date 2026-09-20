@@ -26,6 +26,8 @@ class ExperimentalFrequencyResponse:
         self.response = None
         self.plots_dir = "../plots"
 
+        self.legend_loc = "upper right"
+
     def filter_output(self, cutoff_frequency, plot=False):
         filtered_y_experiments = []
 
@@ -103,7 +105,7 @@ class ExperimentalFrequencyResponse:
                 )
                 axis.set_ylabel(rf"$y_{output_index + 1}$")
                 axis.grid(True)
-                axis.legend(loc="upper right")
+                axis.legend(loc=self.legend_loc)
 
             axes[-1, 0].set_xlabel("Time (s)")
             figure.suptitle(f"Experiment {experiment_index}: filtered outputs")
@@ -161,7 +163,7 @@ class ExperimentalFrequencyResponse:
             axes[0].set_title("Input signals")
             axes[0].set_ylabel("Amplitude")
             axes[0].grid(True)
-            axes[0].legend(loc="upper right")
+            axes[0].legend(loc=self.legend_loc)
 
             for output_index, output_signal in enumerate(y_plot, start=1):
                 axes[1].plot(t_plot, output_signal, label=rf"$y_{output_index}$")
@@ -170,7 +172,7 @@ class ExperimentalFrequencyResponse:
             axes[1].set_xlabel("Time (s)")
             axes[1].set_ylabel("Amplitude")
             axes[1].grid(True)
-            axes[1].legend(loc="upper right")
+            axes[1].legend(loc=self.legend_loc)
 
             figure.suptitle(f"Experiment {experiment_index}")
             figure.tight_layout()
@@ -257,6 +259,7 @@ class ExperimentalFrequencyResponse:
 
 
 def main():
+    # Produção de sinais sintéticos
     sample_rate = 1000
     duration = 20
     n_samples = int(sample_rate * duration)
@@ -297,6 +300,7 @@ def main():
         u_experiments.append(u)
         y_experiments.append(y)
 
+    # Emprego da classe ExperimentalFrequencyResponse
     experimental_frequency_response = ExperimentalFrequencyResponse(
         t_experiments, u_experiments, y_experiments
     )

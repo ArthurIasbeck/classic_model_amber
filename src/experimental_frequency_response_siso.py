@@ -28,7 +28,15 @@ def _format_decimal_comma(value, _):
 
 
 class ExperimentalFrequencyResponseSiso:
-    def __init__(self, data_name, t_experiments, u_experiments, y_experiments):
+    def __init__(
+        self,
+        data_name,
+        t_experiments,
+        u_experiments,
+        y_experiments,
+        data_dir="../data",
+        plots_dir="../plots",
+    ):
 
         self.data_name = data_name
         self.t = list(t_experiments)
@@ -39,8 +47,8 @@ class ExperimentalFrequencyResponseSiso:
         self.n_experiments = len(self.t)
         self.angular_frequencies = None
         self.response = None
-        self.plots_dir = "../plots"
-        self.data_dir = "../data"
+        self.plots_dir = plots_dir
+        self.data_dir = data_dir
 
         self.clip_threshold = 0.01
         self.exp_duration = 601
@@ -70,7 +78,7 @@ class ExperimentalFrequencyResponseSiso:
             plt.grid(True)
             plt.tight_layout()
             plt.savefig(
-                Path(self.plots_dir) / f"mean_dt.svg",
+                Path(self.plots_dir) / "mean_dt.svg",
                 format="svg",
             )
 
@@ -230,9 +238,9 @@ class ExperimentalFrequencyResponseSiso:
             figure, axis = plt.subplots(figsize=(8, 6))
             output_axis = axis.twinx()
 
-            input_line = axis.plot(t_plot, u_plot, label=rf"Perturbação ($\mu$m)")
+            input_line = axis.plot(t_plot, u_plot, label=r"Perturbação ($\mu$m)")
             output_line = output_axis.plot(
-                t_plot, y_plot, color="C1", label=rf"Deslocamento ($\mu$m)"
+                t_plot, y_plot, color="C1", label=r"Deslocamento ($\mu$m)"
             )
 
             axis.set_xlabel("Tempo (s)")
@@ -281,7 +289,6 @@ class ExperimentalFrequencyResponseSiso:
         response = self.response[positive_frequency]
 
         magnitude = 20 * np.log10(np.abs(response))
-        # phase = np.unwrap(np.angle(response))
         phase = np.angle(response)
         angular_frequency_plot, magnitude_plot = interpolate_signals(
             angular_frequency, magnitude
@@ -312,6 +319,7 @@ class ExperimentalFrequencyResponseSiso:
 
 
 def main():
+    # Produção de sinais sintéticos
     sample_rate = 1000
     duration = 20
     n_samples = int(sample_rate * duration)
@@ -348,21 +356,13 @@ def main():
         u_experiments.append(u)
         y_experiments.append(y)
 
+    # Emprego da classe ExperimentalFrequencyResponseSiso
     experimental_frequency_response = ExperimentalFrequencyResponseSiso(
         "synthetic", t_experiments, u_experiments, y_experiments
     )
     experimental_frequency_response.plot_exp_data()
     experimental_frequency_response.compute()
     experimental_frequency_response.plot_freq_resp(max_freq=600)
-
-    # experimental_frequency_response_solo = ExperimentalFrequencyResponseSiso(
-    #     [t_experiments[0]],
-    #     [np.mean(u_experiments, axis=0)],
-    #     [np.mean(y_experiments, axis=0)],
-    # )
-    # experimental_frequency_response_solo.plot_exp_data()
-    # experimental_frequency_response_solo.compute()
-    # experimental_frequency_response_solo.plot_freq_resp(max_freq=600)
 
 
 if __name__ == "__main__":
