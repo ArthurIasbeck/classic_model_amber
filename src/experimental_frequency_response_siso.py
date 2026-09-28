@@ -327,6 +327,7 @@ class ExperimentalFrequencyResponseSiso:
 
         axes[1, 0].semilogx(angular_frequency_plot, phase_plot * 180 / np.pi)
         axes[1, 0].set_ylabel("Fase (graus)")
+        axes[1, 0].set_xlabel("Frequência (rad/s)")
         axes[1, 0].xaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
         axes[1, 0].yaxis.set_major_formatter(FuncFormatter(_format_decimal_comma))
         axes[1, 0].grid(True, which="both")

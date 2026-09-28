@@ -101,8 +101,8 @@ def get_rotor():
             shear_effects=True,
             rotary_inertia=True,
             gyroscopic=True,
-            alpha=4,
-            beta=1e-3,
+            alpha=0.1,
+            beta=1e-6,
         )
         for l, idl, odl in zip(L, i_d, o_d)
     ]
@@ -609,5 +609,35 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    rotor = get_rotor()
+    rotor_sys = rotor._lti(speed=0)
+    sys = ct.ss(rotor_sys.A, rotor_sys.B, rotor_sys.C, rotor_sys.D)
+
+    # sys_for_pole_zero_map = ct.minreal(sys, tol=1e-3, verbose=False)
+    poles = ct.poles(sys)
+    zeros = ct.zeros(sys)
+
+    fig, ax = plt.subplots(figsize=(6, 5), dpi=180)
+    ax.plot(poles.real, poles.imag, "x", ms=8, mew=1.5, label="Poles")
+    ax.plot(
+        zeros.real,
+        zeros.imag,
+        "o",
+        ms=7,
+        mfc="none",
+        mew=1.5,
+        label="Zeros",
+    )
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.axvline(0, color="black", linewidth=0.8)
+    ax.set_xlim(-500, 2000)
+    ax.set_ylim(-500, 500)
+    ax.set_xlabel("Real axis")
+    ax.set_ylabel("Imaginary axis")
+    ax.set_title("Pole-zero map of sys")
+    ax.grid(True)
+    ax.legend()
+    fig.tight_layout()
+
     plt.show()

@@ -1,3 +1,5 @@
+import numpy as np
+
 from dataset import Dataset
 from experimental_frequency_response_siso import ExperimentalFrequencyResponseSiso
 from loguru import logger
@@ -60,17 +62,19 @@ def main_v13():
 
     logger.info("Iniciando filtragem dos dados...")
     experimental_freq_resp.filter_output(cutoff_frequency=600)
-    experimental_freq_resp.plot_filter_output()
+    # experimental_freq_resp.plot_filter_output()
     logger.info("Filtragem dos dados concluída.")
 
     logger.info("Iniciando recorte dos dados...")
     experimental_freq_resp.clip_data(plot=False)
-    experimental_freq_resp.plot_exp_data()
+    # experimental_freq_resp.plot_exp_data()
     logger.info("Recorte dos dados concluído.")
 
     logger.info("Iniciando computação da resposta em frequência...")
     experimental_freq_resp.compute()
-    experimental_freq_resp.plot_freq_resp(min_freq=1, max_freq=600)
+    experimental_freq_resp.plot_freq_resp(
+        min_freq=2 * np.pi * 1, max_freq=2 * np.pi * 600
+    )
     logger.info("Computação da resposta em frequência concluída.")
 
 
@@ -115,12 +119,12 @@ if __name__ == "__main__":
     logger.info("Computação da resposta em frequência de malha fechada do eixo V13")
     main_v13()
 
-    logger.info("Computação da resposta em frequência de malha fechada do eixo W13")
-    main_w13()
+    # logger.info("Computação da resposta em frequência de malha fechada do eixo W13")
+    # main_w13()
 
     logger.info("Computação da resposta em frequência de malha aberta do eixo V13")
     main_v13_ol()
 
-    logger.info("Computação da resposta em frequência de malha aberta do eixo W13")
-    main_w13_ol()
+    # logger.info("Computação da resposta em frequência de malha aberta do eixo W13")
+    # main_w13_ol()
     plt.show()

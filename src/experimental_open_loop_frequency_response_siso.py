@@ -68,8 +68,8 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
         self.close_loop_fr = data["response"]  # Resposta em malha fechada.
         self.angular_frequencies = data["angular_frequencies"]  # Frequências angulares.
 
-        angular_freq_mask = (self.angular_frequencies > 4) & (
-            self.angular_frequencies < 600
+        angular_freq_mask = (self.angular_frequencies > 2 * np.pi * 5) & (
+            self.angular_frequencies < 1500
         )
         self.angular_frequencies = self.angular_frequencies[angular_freq_mask]
         self.close_loop_fr = self.close_loop_fr[angular_freq_mask]
@@ -82,6 +82,7 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
 
         C_jw = controller_magnitude * np.exp(1j * controller_phase)
         T_jw = self.close_loop_fr
+
         G_jw = -T_jw / (C_jw * (1 + T_jw))
 
         magnitude = 20 * np.log10(np.abs(G_jw))
@@ -94,13 +95,25 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
             response=self.H,
         )
 
+        np.savetxt(
+            Path(self.data_dir) / "open_loop_frequency_responses.txt",
+            np.column_stack(
+                (
+                    omega,
+                    np.real(G_jw),
+                    np.imag(G_jw),
+                )
+            ),
+            fmt="%.18e",
+        )
+
         if plot:
             ang_freq_label = "Angular frequency [rad/s]"
             phase_freq_label = "Phase [deg]"
 
             fig = plt.figure(figsize=(6, 5), dpi=180)
             plt.subplot(2, 1, 1)
-            plt.semilogx(omega[omega < 600], 20 * np.log10(controller_magnitude))
+            plt.semilogx(omega, 20 * np.log10(controller_magnitude))
             plt.grid()
             plt.ylabel("Magnitude [dB]")
 
@@ -117,7 +130,7 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
                 format="svg",
             )
 
-            fig = plt.figure(figsize=(6, 5), dpi=180)
+            fig = plt.figure(figsize=(10, 6), dpi=200)
             plt.subplot(2, 1, 1)
             plt.semilogx(omega, magnitude)
             plt.grid()
@@ -142,11 +155,12 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
         """Avalia atrasos candidatos e plota seu efeito sobre a fase da resposta."""
         omega = self.angular_frequencies
         f_obj_values = []
-        tau_values = np.linspace(0, 0.25, 1000)
+        tau_values = np.linspace(0, 0.25, 100)
         for tau in tau_values:
             H_1 = self.H * np.exp(1j * omega * tau)
             sin_H1 = np.sin(np.angle(H_1))
             f_obj = np.sqrt(np.sum(sin_H1**2))
+            print(f"tau = {tau} s | f_obj = {f_obj}")
             f_obj_values.append(f_obj)
 
         f_obj_values = np.array(f_obj_values)
@@ -161,30 +175,5 @@ class ExperimentalOpenLoopFrequencyResponseSiso:
 
             plt.savefig(
                 Path(self.plots_dir) / "objetive_function_delay.svg",
-                format="svg",
-            )
-
-        # Teste para tau > 0
-        if plot:
-            tau = 0.001
-            H_1 = self.H * np.exp(1j * omega * tau)
-
-            plt.figure(figsize=(6, 5), dpi=180)
-            plt.semilogx(
-                omega, np.rad2deg(np.unwrap(np.angle(self.H))), label="Original"
-            )
-            plt.semilogx(
-                omega,
-                np.rad2deg(np.unwrap(np.angle(H_1))),
-                label=rf"Delay Removed (τ = {tau:.3g} s)",
-            )
-            plt.grid()
-            plt.xlabel("Angular frequency [rad/s]")
-            plt.ylabel("Phase [deg]")
-            plt.tight_layout()
-            plt.legend()
-
-            plt.savefig(
-                Path(self.plots_dir) / "compare_original_delay_removed.svg",
                 format="svg",
             )
